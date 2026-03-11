@@ -1,7 +1,4 @@
-"""
-ProForm Viewer — Top-Down Proteomics Analysis Tool (Streamlit)
-Run with:  streamlit run streamlit_app.py
-"""
+
 import io
 import csv
 import json
@@ -26,36 +23,31 @@ from src.viz.mirror_plots import create_mirror_plot
 from src.viz.feature_plots import create_feature_map, create_intensity_trace
 from src.data.amino_acids import AA_MASSES, PTM_DATABASE
 
-# ─── Page config ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Top-Down Proteomics Viewer",
-    page_icon="🔬",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ─── Session-state initialisation ────────────────────────────────────────────
 _DEFAULTS = {
-    "spectra":          [],   # list[Spectrum]
-    "features":         [],   # list[Feature]
-    "scan_idx":         0,
-    "protein":          {},   # {name, sequence, mass}
-    "search_results":   [],   # list[SearchResult]
-    "matched_ions":     [],   # list[FragmentIon]
-    "selected_result":  None, # Proteoform or None
+    "spectra":         [],
+    "features":        [],
+    "scan_idx":        0,
+    "protein":         {},
+    "search_results":  [],
+    "matched_ions":    [],
+    "selected_result": None,
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
 
-# ─── Helpers ─────────────────────────────────────────────────────────────────
 def _clean_seq(seq: str) -> str:
     return "".join(c for c in seq.upper() if c in AA_MASSES)
 
 
 def _load_spectrum_file(uploaded) -> tuple[list, str]:
-    """Parse a Streamlit UploadedFile into a list[Spectrum] + status message."""
     raw = uploaded.read()
     fname = uploaded.name.lower()
     if fname.endswith(".mzml"):
@@ -76,16 +68,14 @@ def _load_features_file(uploaded) -> tuple[list, str]:
     return feats, f"Loaded {len(feats)} feature(s) from {uploaded.name}"
 
 
-# ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 🔬 Top-Down Proteomics Viewer")
+    st.markdown("## Top-Down Proteomics Viewer")
     st.caption("v1.0 — Single-spectrum proteoform analysis")
     st.divider()
 
-    # ── Data Input ────────────────────────────────────────────────────────
     st.markdown("##### DATA INPUT")
 
-    if st.button("⚡ Load Demo", use_container_width=True, type="secondary"):
+    if st.button("Load Demo", use_container_width=True, type="secondary"):
         demo_spec = generate_demo_spectrum()
         st.session_state.spectra = [demo_spec]
         st.session_state.scan_idx = 0
@@ -96,11 +86,11 @@ with st.sidebar:
             "sequence": UBIQUITIN,
             "mass": calc_sequence_mass(_clean_seq(UBIQUITIN)),
         }
-        # Reset downstream state
         st.session_state.search_results = []
         st.session_state.matched_ions = []
         st.session_state.selected_result = None
         st.success("Demo loaded.")
+
 
     uploaded_spec = st.file_uploader(
         "Upload Spectrum (.mzML / peak CSV)",
@@ -134,7 +124,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Scan Selector ─────────────────────────────────────────────────────
     st.markdown("##### SCAN")
     spectra: list[Spectrum] = st.session_state.spectra
     if spectra:
@@ -161,7 +150,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Protein ───────────────────────────────────────────────────────────
     st.markdown("##### PROTEIN")
     prot_name = st.text_input(
         "Protein Name",
@@ -184,7 +172,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Search Parameters ─────────────────────────────────────────────────
     st.markdown("##### SEARCH PARAMETERS")
     col1, col2 = st.columns(2)
     with col1:
@@ -213,7 +200,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Manual Mass Input ─────────────────────────────────────────────────
     st.markdown("##### MANUAL MASS INPUT")
     manual_mass = st.number_input(
         "Observed Neutral Mass (Da)",
@@ -242,13 +228,12 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Run Search ────────────────────────────────────────────────────────
-    run_clicked = st.button("▶ Run Search", use_container_width=True, type="primary")
+    run_clicked = st.button("Run Search", use_container_width=True, type="primary")
     if run_clicked:
         if not st.session_state.spectra:
-            st.error("⚠ Load a spectrum first.")
+            st.error("Load a spectrum first.")
         elif not st.session_state.protein.get("sequence"):
-            st.error("⚠ Enter a protein sequence.")
+            st.error("Enter a protein sequence.")
         else:
             with st.spinner("Running search…"):
                 spectrum = st.session_state.spectra[st.session_state.scan_idx]
@@ -269,40 +254,36 @@ with st.sidebar:
                 st.session_state.search_results = results
                 st.session_state.matched_ions = results[0].fragment_ions
                 st.session_state.selected_result = results[0].proteoform
-                st.success(f"✓ {len(results)} hit(s) found")
+                st.success(f"{len(results)} hit(s) found")
             else:
                 st.session_state.search_results = []
                 st.session_state.matched_ions = []
                 st.session_state.selected_result = None
                 st.warning("No results found.")
 
-    # ── Top hit summary ───────────────────────────────────────────────────
     if st.session_state.search_results:
         st.divider()
         st.markdown("##### TOP HIT SUMMARY")
         top = st.session_state.search_results[0]
         pf0 = top.proteoform
-        ppm_col = "🟢" if abs(pf0.mass_error_ppm) <= 5 else "🔴"
         st.caption(
             f"Score: **{pf0.score:.2f}**  \n"
             f"Proteoform: {pf0.start_pos}–{pf0.end_pos}  \n"
             f"Ions matched: {pf0.matched_ions}/{pf0.total_ions}  \n"
             f"Coverage: {top.sequence_coverage:.1f}%  \n"
             f"Th. mass: {pf0.theoretical_mass:.4f} Da  \n"
-            f"{ppm_col} Δmass: {pf0.mass_error_ppm:+.2f} ppm"
+            f"Delta mass: {pf0.mass_error_ppm:+.2f} ppm"
             + (f"  \nPTMs: {'; '.join(m.name for m in pf0.modifications)}"
                if pf0.modifications else "")
         )
 
 
-# ─── Main content ─────────────────────────────────────────────────────────────
 st.title("Top-Down Proteomics Viewer")
 
 tab_spec, tab_seq, tab_mirror, tab_results, tab_features = st.tabs(
-    ["📈 Spectrum", "🧬 Sequence", "🔁 Mirror Plot", "📋 Search Results", "🗺 Feature Map"]
+    ["Spectrum", "Sequence", "Mirror Plot", "Search Results", "Feature Map"]
 )
 
-# ── Tab: Spectrum ─────────────────────────────────────────────────────────────
 with tab_spec:
     spectra = st.session_state.spectra
     if spectra:
@@ -313,7 +294,6 @@ with tab_spec:
     else:
         st.info("Load a spectrum or click **Load Demo** to begin.")
 
-# ── Tab: Sequence ─────────────────────────────────────────────────────────────
 with tab_seq:
     show_cleavage = st.checkbox("Show cleavage ticks", value=True, key="show_cleavage")
 
@@ -337,7 +317,6 @@ with tab_seq:
     fig_seq = create_sequence_plot(pf, ions, show_cleavage=show_cleavage)
     st.plotly_chart(fig_seq, use_container_width=True)
 
-# ── Tab: Mirror Plot ──────────────────────────────────────────────────────────
 with tab_mirror:
     col_a, col_b = st.columns(2)
     with col_a:
@@ -353,20 +332,17 @@ with tab_mirror:
     else:
         st.info("Load a spectrum first.")
 
-# ── Tab: Search Results ───────────────────────────────────────────────────────
 with tab_results:
     results: list[SearchResult] = st.session_state.search_results
     if not results:
         st.info("Run a search to see results here.")
     else:
-        # Summary
         spectrum = st.session_state.spectra[st.session_state.scan_idx]
         st.caption(
             f"{len(results)} candidate(s) | Scan {spectrum.scan_id} | "
             f"Tolerance {tol_ppm} ppm"
         )
 
-        # Build table
         rows = []
         for rank, r in enumerate(results, 1):
             pf = r.proteoform
@@ -393,7 +369,6 @@ with tab_results:
             key="results_table",
         )
 
-        # Row selection → update matched ions + selected proteoform
         sel_indices = selected_rows.selection.rows if selected_rows else []
         if sel_indices:
             sel_idx = sel_indices[0]
@@ -401,7 +376,6 @@ with tab_results:
             st.session_state.matched_ions = chosen_result.fragment_ions
             st.session_state.selected_result = chosen_result.proteoform
 
-        # Ion table for currently displayed result
         display_result = (
             results[sel_indices[0]] if sel_indices else results[0]
         )
@@ -414,12 +388,11 @@ with tab_results:
                 "Obs. m/z": round(ion.observed_mz, 4) if ion.matched else "—",
                 "Δ ppm": round(ion.mass_error_ppm, 2) if ion.matched else "—",
                 "z": ion.charge,
-                "Matched": "✓" if ion.matched else "✗",
+                "Matched": "yes" if ion.matched else "no",
                 "Sequence": ion.sequence[:15] if ion.sequence else "",
             })
         st.dataframe(pd.DataFrame(ion_rows), use_container_width=True, hide_index=True)
 
-        # Export
         st.markdown("**Export**")
         exp_col1, exp_col2, exp_col3, exp_col4 = st.columns(4)
 
@@ -441,7 +414,7 @@ with tab_results:
                     "mass_error_da": pf.mass_error_da, "mass_error_ppm": pf.mass_error_ppm,
                     "modifications": "; ".join(f"{m.name}@{m.position}" for m in pf.modifications),
                 })
-            st.download_button("⬇ Results CSV", buf.getvalue(), "proform_results.csv", "text/csv")
+            st.download_button("Results CSV", buf.getvalue(), "proform_results.csv", "text/csv")
 
         with exp_col2:
             buf2 = io.StringIO()
@@ -457,7 +430,7 @@ with tab_results:
                     "mass_error_ppm": ion.mass_error_ppm if ion.matched else "",
                     "matched": ion.matched, "sequence": ion.sequence or "",
                 })
-            st.download_button("⬇ Ions CSV", buf2.getvalue(), "proform_ions.csv", "text/csv")
+            st.download_button("Ions CSV", buf2.getvalue(), "proform_ions.csv", "text/csv")
 
         with exp_col3:
             feats = st.session_state.features
@@ -467,9 +440,9 @@ with tab_results:
                 w3 = csv.DictWriter(buf3, fieldnames=list(rows_f[0].keys()))
                 w3.writeheader()
                 w3.writerows(rows_f)
-                st.download_button("⬇ Features CSV", buf3.getvalue(), "proform_features.csv", "text/csv")
+                st.download_button("Features CSV", buf3.getvalue(), "proform_features.csv", "text/csv")
             else:
-                st.button("⬇ Features CSV", disabled=True)
+                st.button("Features CSV", disabled=True)
 
         with exp_col4:
             session_json = json.dumps({
@@ -477,9 +450,8 @@ with tab_results:
                 "matched_ions":   [i.to_dict() for i in st.session_state.matched_ions],
                 "features":       [f.__dict__ for f in st.session_state.features],
             }, indent=2, default=str)
-            st.download_button("⬇ JSON Session", session_json, "proform_session.json", "application/json")
+            st.download_button("JSON Session", session_json, "proform_session.json", "application/json")
 
-# ── Tab: Feature Map ──────────────────────────────────────────────────────────
 with tab_features:
     features: list[Feature] = st.session_state.features
     if features:
@@ -495,7 +467,6 @@ with tab_features:
             with col_m2:
                 th_charge_input = st.number_input("Charge for trace", value=10, min_value=1, step=1)
 
-        # Build proteoform overlays
         proteoforms = []
         if th_mass_input:
             proteoforms = [Proteoform(sequence="", protein_name="Target", theoretical_mass=float(th_mass_input))]
