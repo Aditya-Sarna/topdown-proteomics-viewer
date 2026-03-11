@@ -118,13 +118,18 @@ def create_spectrum_plot(spectrum: Spectrum,
             showlegend=False, legendgroup=itype,
         ))
 
-    # --- Text annotations for top-N matched peaks ---
     if matched_ions:
         all_matched = [(ion.observed_mz, intensity[np.argmin(np.abs(mz - ion.observed_mz))], ion.label())
                        for ion in matched_ions if ion.matched]
         all_matched.sort(key=lambda x: -x[1])
+        mz_span = (mz.max() - mz.min()) if len(mz) > 1 else 1000.0
+        min_gap = mz_span * 0.012
+        placed_mz = []
         annotations = []
         for obs_m, obs_i, lbl in all_matched[:annotate_top_n]:
+            if any(abs(obs_m - pm) < min_gap for pm in placed_mz):
+                continue
+            placed_mz.append(obs_m)
             itype = lbl[0] if lbl[0] in ION_COLORS else 'b'
             annotations.append(dict(
                 x=obs_m, y=obs_i + 2,

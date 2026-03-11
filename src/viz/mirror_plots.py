@@ -86,20 +86,33 @@ def create_mirror_plot(spectrum: Spectrum,
                     showlegend=False,
                 ), row=1, col=1)
 
-            # Hover labels for matched
             if matched_mz:
-                labels = [ion.label() for ion in matched_ions
-                          if ion.matched and ion.ion_type == itype
-                          and mz_range[0] <= ion.mz <= mz_range[1]]
-                fig.add_trace(go.Scatter(
-                    x=matched_mz,
-                    y=[105] * len(matched_mz),
-                    mode='text',
-                    text=labels[:len(matched_mz)],
-                    textfont=dict(size=8, color=color),
-                    showlegend=False, legendgroup=itype,
-                    hoverinfo='skip',
-                ), row=1, col=1)
+                candidate_labels = [
+                    (ion.mz, ion.label())
+                    for ion in matched_ions
+                    if ion.matched and ion.ion_type == itype
+                    and mz_range[0] <= ion.mz <= mz_range[1]
+                ]
+                span = mz_range[1] - mz_range[0] if mz_range else 1800.0
+                min_gap = span * 0.018
+                placed: list = []
+                filtered_lx, filtered_ly, filtered_lt = [], [], []
+                for lm, ll in sorted(candidate_labels, key=lambda x: x[0]):
+                    if any(abs(lm - pm) < min_gap for pm in placed):
+                        continue
+                    placed.append(lm)
+                    filtered_lx.append(lm)
+                    filtered_ly.append(106)
+                    filtered_lt.append(ll)
+                if filtered_lx:
+                    fig.add_trace(go.Scatter(
+                        x=filtered_lx, y=filtered_ly,
+                        mode='text',
+                        text=filtered_lt,
+                        textfont=dict(size=8, color=color),
+                        showlegend=False, legendgroup=itype,
+                        hoverinfo='skip',
+                    ), row=1, col=1)
     else:
         fig.add_annotation(
             text="Run a search to see matched theoretical ions",

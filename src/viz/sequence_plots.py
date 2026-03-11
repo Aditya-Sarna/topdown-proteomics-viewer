@@ -22,11 +22,18 @@ DARK_BG  = '#ffffff'
 PLOT_BG  = '#ffffff'
 
 _COLORS = {
-    'n_term':    '#1976D2',  # blue
-    'c_term':    '#D32F2F',  # red
-    'both':      '#7B1FA2',  # purple
-    'uncovered': '#e8e8e8',  # light gray
-    'ptm':       '#FFD54F',  # gold
+    'n_term':    '#BBDEFB',
+    'c_term':    '#FFCDD2',
+    'both':      '#CE93D8',
+    'uncovered': '#F0F0F0',
+    'ptm':       '#F9A825',
+}
+
+_BORDER_COLORS = {
+    'n_term':    '#1976D2',
+    'c_term':    '#C62828',
+    'both':      '#6A1B9A',
+    'uncovered': '#cccccc',
 }
 
 _LEGEND = [
@@ -66,7 +73,7 @@ def create_sequence_plot(proteoform: Proteoform,
         mod_lookup.setdefault(p, []).append(m.name)
 
     # Build grid coordinates
-    xs, ys, colors, labels, hovers = [], [], [], [], []
+    xs, ys, colors, border_colors, labels, hovers = [], [], [], [], [], []
     for i, aa in enumerate(seq):
         col = i % RESIDUES_PER_ROW
         row = i // RESIDUES_PER_ROW
@@ -80,12 +87,16 @@ def create_sequence_plot(proteoform: Proteoform,
 
         if has_n and has_c:
             colors.append(_COLORS['both'])
+            border_colors.append(_BORDER_COLORS['both'])
         elif has_n:
             colors.append(_COLORS['n_term'])
+            border_colors.append(_BORDER_COLORS['n_term'])
         elif has_c:
             colors.append(_COLORS['c_term'])
+            border_colors.append(_BORDER_COLORS['c_term'])
         else:
             colors.append(_COLORS['uncovered'])
+            border_colors.append(_BORDER_COLORS['uncovered'])
 
         mnames = mod_lookup.get(i, [])
         hov = f"<b>{aa}{i+1}</b>"
@@ -94,12 +105,11 @@ def create_sequence_plot(proteoform: Proteoform,
         hov += f"<br>Ions: {', '.join(covered) or 'none'}"
         hovers.append(hov)
 
-    # Residue squares
     fig.add_trace(go.Scatter(
         x=xs, y=ys,
         mode='markers+text',
         marker=dict(symbol='square', size=26, color=colors,
-                    line=dict(color='rgba(0,0,0,0.15)', width=1)),
+                    line=dict(color=border_colors, width=1.5)),
         text=labels,
         textfont=dict(color='#111111', size=11, family='Courier New'),
         textposition='middle center',
