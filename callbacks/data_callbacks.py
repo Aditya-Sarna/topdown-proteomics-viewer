@@ -1,0 +1,168 @@
+"""
+Data-loading callbacks:
+  - Upload spectrum file  → store-spectra, scan-selector options
+  - Upload feature table  → store-features
+  - Load demo button      → both stores
+  - Scan selector change  → store-selected-scan-idx, scan-info
+  - Protein text input    → store-protein, protein-mass-display
+  - Manual mass input     → mass-diff-display, mod-suggestions
+"""
+import json
+from dash import Input, Output, State, no_update
+
+from src.data.parsers import (decode_upload, generate_demo_spectrum,
+                               generate_demo_features, UBIQUITIN, UBIQUITIN_MASS)
+from src.data.models import Spectrum
+from src.analysis.mass_utils import (calc_sequence_mass, suggest_modifications,
+                                      ppm_error)
+from src.data.amino_acids import AA_MASSES
+
+
+def register_callbacks(app):
+
+    # ── Load demo — fills spectrum, features, protein name+sequence ────────
+    @app.callback(
+        Output('store-spectra',         'data'),
+        Output('scan-selector',         'options'),
+        Output('scan-selector',         'value'),
+        Output('upload-spectrum-status','children'),
+        Output('protein-name',          'value'),
+        Output('protein-sequence',      'value'),
+        Input('load-demo-btn', 'n_clicks'),
+        prevent_initial_call=True,
+    )
+    def load_demo(_):
+        demo = generate_demo_spectrum()
+        spectra_data = [demo.to_dict()]
+        opts = [{'label': f"{demo.scan_id}  RT={demo.retention_time:.2f} min  "
+                          f"precursor={demo.precursor_mz:.4f} m/z  z={demo.precursor_charge}",
+                 'value': 0}]
+        src_note = (
+            'Loaded: real instrument file (online)'
+            if 'computed' not in demo.file_name
+            else 'Loaded: computed ECD spectrum of human ubiquitin (Zubarev 1998)'
+        )
+        return spectra_data, opts, 0, src_note, 'Ubiquitin', UBIQUITIN
+
+    # ── Upload spectrum ────────────────────────────────────────────────────
+    @app.callback(
+        Output('store-spectra',          'data', allow_duplicate=True),
+        Output('scan-selector',          'options', allow_duplicate=True),
+        Output('scan-selector',          'value', allow_duplicate=True),
+        Output('upload-spectrum-status', 'children', allow_duplicate=True),
+        Input('upload-spectrum', 'contents'),
+        State('upload-spectrum', 'filename'),
+        prevent_initial_call=True,
+    )
+    def load_spectrum(contents, filename):
+        if not contents:
+            return no_update, no_update, no_update, no_update
+
+        spectra, _, msg = decode_upload(contents, filename or 'file')
+        if not spectra:
+            return [], [], None, f'Error: {msg}'
+        data = [s.to_dict() for s in spectra]
+        opts = [{'label': f"{s.scan_id}  RT={s.retention_time:.2f}  "
+                          f"precursor={s.precursor_mz:.3f}",
+                 'value': i}
+                for i, s in enumerate(spectra)]
+        return data, opts, 0, f'Loaded: {msg}'
+
+    # ── Demo — also loads features ─────────────────────────────────────────
+    @app.callback(
+        Output('store-features', 'data'),
+        Output('upload-features-status', 'children'),
+        Input('load-demo-btn', 'n_clicks'),
+        prevent_initial_call=True,
+    )
+    def load_demo_features(_):
+        feats = generate_demo_features()
+        return [f.to_dict() for f in feats], f'{len(feats)} features loaded (demo)'
+
+    # ── Upload features ────────────────────────────────────────────────────
+    @app.callback(
+        Output('store-features',          'data', allow_duplicate=True),
+        Output('upload-features-status',  'children', allow_duplicate=True),
+        Input('upload-features', 'contents'),
+        State('upload-features', 'filename'),
+        prevent_initial_call=True,
+    )
+    def load_features(contents, filename):
+        if not contents:
+            return no_update, no_update
+        _, features, msg = decode_upload(contents, filename or 'file')
+        if not features:
+            return [], f'Error: {msg}'
+        return [f.to_dict() for f in features], f'Loaded: {msg}'
+
+    # ── Scan info on selection ─────────────────────────────────────────────
+    @app.callback(
+        Output('store-selected-scan-idx', 'data'),
+        Output('scan-info', 'children'),
+        Input('scan-selector', 'value'),
+        State('store-spectra', 'data'),
+        prevent_initial_call=True,
+    )
+    def on_scan_select(idx, spectra_data):
+        if idx is None or not spectra_data:
+            return 0, ''
+        d = spectra_data[idx]
+        n_peaks = len(d['mz'])
+        info = (f"Scan {d['scan_id']} | {n_peaks} peaks | "
+                f"RT {d['retention_time']:.2f} min | "
+                f"Prec {d['precursor_mz']:.3f} m/z z={d['precursor_charge']}")
+        return idx, info
+
+    # ── Protein input → store-protein, mass display ────────────────────────
+    @app.callback(
+        Output('store-protein', 'data'),
+        Output('protein-mass-display', 'children'),
+        Input('protein-sequence', 'value'),
+        Input('protein-name', 'value'),
+    )
+    def on_protein_input(seq, name):
+        seq  = (seq or '').strip().upper()
+        name = (name or '').strip()
+        if not seq:
+            return {}, ''
+        # Clean sequence
+        seq = ''.join(c for c in seq if c in AA_MASSES)
+        mass = calc_sequence_mass(seq)
+        prot_data = {'name': name or 'Protein', 'sequence': seq, 'mass': mass}
+        info = (f"{len(seq)} aa | Monoisotopic mass: {mass:.4f} Da")
+        return prot_data, info
+
+    # ── Manual mass → mass-diff-display, mod suggestions ─────────────────
+    @app.callback(
+        Output('mass-diff-display', 'children'),
+        Output('mod-suggestions', 'children'),
+        Input('calc-mass-diff-btn', 'n_clicks'),
+        State('manual-mass', 'value'),
+        State('store-protein', 'data'),
+        prevent_initial_call=True,
+    )
+    def calc_mass_diff(n_clicks, obs_mass_val, prot_data):
+        if obs_mass_val is None or not prot_data:
+            return 'Enter a protein sequence and observed mass first.', ''
+        obs  = float(obs_mass_val)
+        th   = prot_data.get('mass', 0)
+        diff = obs - th
+        ppm  = ppm_error(obs, th) if th else 0.0
+        diff_text = (f"Δmass = {diff:+.4f} Da  ({ppm:+.1f} ppm)")
+        sugg = suggest_modifications(diff)
+        if not sugg:
+            sugg_el = 'No matching PTMs found.'
+        else:
+            items = [
+                f"• {s['name']}  ({s['mass_shift']:+.4f} Da,  "
+                f"residual {s['residual_da']:+.5f} Da)"
+                for s in sugg[:6]
+            ]
+            sugg_el = html_list(items)
+        return diff_text, sugg_el
+
+
+def html_list(items):
+    from dash import html
+    return html.Ul([html.Li(i, style={'marginBottom': '2px'}) for i in items],
+                   style={'paddingLeft': '12px', 'margin': '0'})
