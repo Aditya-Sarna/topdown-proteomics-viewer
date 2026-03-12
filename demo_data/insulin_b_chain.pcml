@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  insulin_b_chain.pcml — Top-Down Proteomics Viewer sample file
+  Protein : Human insulin B chain (INS_HUMAN)
+  UniProt : P01308  |  B-chain residues 25–54 of the precursor, 30 aa
+  Sequence: FVNQHLCGSHLVEALYLVCGERGFFYTPKT
+  Mass    : 3427.68452 Da (monoisotopic, free B chain, Cys residues as free thiols)
+  Note    : In native insulin, Cys7(B)–Cys7(A) and Cys19(B)–Cys20(A) form inter-chain
+            disulfides; this file models the reduced (free-thiol) B chain.
+  Spectrum: Simulated HCD, precursor [M+3H]3+ at m/z 1143.56878
+            All 29 b-ions + 29 y-ions (charge 1+), sorted by m/z
+-->
+<pcml version="1.0">
+
+  <protein id="P01308_Bchain" name="Insulin B chain">
+    <sequence>FVNQHLCGSHLVEALYLVCGERGFFYTPKT</sequence>
+    <proteoform id="pf1">
+      <!-- Free Cys residues (reduced form); no disulfide modifications applied -->
+    </proteoform>
+  </protein>
+
+  <featureList>
+    <!-- [M+3H]3+ — dominant charge state for 30-aa peptide -->
+    <feature id="F1" mz="1143.56878" rt="23.80" rt_start="23.10" rt_end="24.50"
+             mz_start="1143.52" mz_end="1143.62"
+             charge="3" mass="3427.68452" intensity="1850000"/>
+    <!-- [M+4H]4+ -->
+    <feature id="F2" mz="857.92841"  rt="23.80" rt_start="23.10" rt_end="24.50"
+             mz_start="857.88"  mz_end="857.97"
+             charge="4" mass="3427.68452" intensity="920000"/>
+  </featureList>
+
+  <spectrumList>
+    <!-- HCD spectrum of [M+3H]3+; b-ions (b1–b29) and y-ions (y1–y29) at z=1 -->
+    <spectrum id="scan=884" ms_level="2" rt="23.80"
+              precursor_mz="1143.56878" precursor_charge="3">
+      <mzArray>
+        120.06552  148.07569  247.14410  248.16048  345.21324  361.18703  446.26092
+        489.24561  609.32425  626.30452  739.38858  756.39266  842.39777  899.41923
+        903.46107  960.48253  986.45126 1116.58364 1123.51017 1236.59423 1245.62623
+        1302.64769 1335.66264 1405.65688 1464.70523 1504.72529 1535.74234 1617.80935
+        1648.82640 1780.87268 1811.88973 1893.95674 1924.97379 1964.99385 2024.04220
+        2094.03644 2127.05139 2184.07285 2193.10485 2306.18891 2313.11544 2443.24782
+        2469.21655 2526.23801 2530.27985 2587.30131 2673.30642 2690.31050 2803.39456
+        2820.37483 2940.45347 2983.43816 3068.51205 3084.48584 3181.53860 3182.55498
+        3281.62339 3309.63356
+      </mzArray>
+      <intensityArray>
+         40000   55000   92000   88000  115000  120000  145000
+        155000  175000  182000  196000  189000  201000  178000
+        174000  167000  183000  205000  210000  225000  218000
+        195000  230000  212000  245000  227000  215000  236000
+        248000  256000  243000  228000  215000  198000  205000
+        189000  176000  165000  158000  145000  138000  127000
+        119000  108000  103000   94000   88000   82000   75000
+         70000   64000   58000   52000   47000   42000   39000
+         35000   31000
+      </intensityArray>
+    </spectrum>
+  </spectrumList>
+
+</pcml>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  hemoglobin_beta.pcml — Top-Down Proteomics Viewer sample file
+  Protein : Human haemoglobin subunit beta (HBB_HUMAN)
+  UniProt : P68871  |  147 aa (monoisotopic mass 15988.28983 Da)
+  Note    : Initiator Met (position 1) is co-translationally removed;
+            the mature circulating chain is 146 aa (Val2–His147).
+            Position 7 (Glu) is the site of the sickle-cell HbS mutation (Glu→Val).
+  Spectrum: Simulated HCD, precursor [M+13H]13+ at m/z 1230.87572
+            30 b-ions + 30 y-ions (charge 1+), sorted by m/z
+-->
+<pcml version="1.0">
+
+  <protein id="P68871" name="Hemoglobin subunit beta">
+    <sequence>MVHLTPEEKSAVTALWGKVNVDEVGGEALGRLLVVYPWTQRFFESFGDLSTPDAVMGNPKVKAHGKKVLGAFSDGLAHLDNLKGTFATLSELHCDKLHVDPENFRLLGNVLVCVLAHHFGKEFTPPVQAAYQKVVAGVANALAHKYH</sequence>
+    <proteoform id="pf1">
+      <!-- Wild-type HbA proteoform; no PTM applied -->
+      <!-- HbS pathogenic variant: position 7 Glu->Val (mass_shift -13.97926) -->
+    </proteoform>
+  </protein>
+
+  <featureList>
+    <!-- [M+12H]12+ -->
+    <feature id="F1" mz="1333.36476" rt="32.50" rt_start="31.80" rt_end="33.20"
+             mz_start="1333.30" mz_end="1333.43"
+             charge="12" mass="15988.28983" intensity="3200000"/>
+    <!-- [M+13H]13+ — most abundant charge state -->
+    <feature id="F2" mz="1230.87572" rt="32.50" rt_start="31.80" rt_end="33.20"
+             mz_start="1230.82" mz_end="1230.93"
+             charge="13" mass="15988.28983" intensity="4800000"/>
+    <!-- [M+14H]14+ -->
+    <feature id="F3" mz="1142.88512" rt="32.40" rt_start="31.70" rt_end="33.10"
+             mz_start="1142.83" mz_end="1142.94"
+             charge="14" mass="15988.28983" intensity="2100000"/>
+  </featureList>
+
+  <spectrumList>
+    <!-- HCD spectrum of [M+13H]13+; b-ions (b1–b30) and y-ions (y1–y30) at z=1 -->
+    <spectrum id="scan=2150" ms_level="2" rt="32.50"
+              precursor_mz="1230.87572" precursor_charge="13">
+      <mzArray>
+        132.04777  156.07675  231.11618  319.14008  368.17509  447.23504  481.25915  582.30683
+        584.29395  655.33106  679.35959  768.41512  808.40218  839.45223  937.44477  953.49516
+        1024.53227 1065.53973 1123.60068 1152.57176 1180.62214 1223.60887 1251.65925 1322.67728
+        1350.72766 1423.72496 1449.79607 1494.76207 1577.89103 1607.84613 1705.94961 1793.92544
+        1850.94690 1869.01294 1940.05005 1979.04186 2011.08716 2078.11027 2139.14574 2192.15320
+        2238.21415 2291.22161 2335.26691 2406.24855 2432.31967 2533.36735 2535.29114 2634.35955
+        2680.43576 2691.38101 2748.40247 2809.47835 2877.44506 2937.57331 2948.48217 2994.59477
+        3061.56623 3118.58769 3141.66318 3278.72209
+      </mzArray>
+      <intensityArray>
+         45000   32000   68000   51000   92000   74000  115000  143000
+         87000  108000  129000   95000  156000  112000  178000  134000
+        167000  189000  145000  178000  134000  212000  156000  198000
+        167000  223000  189000  178000  145000  167000  130000  156000
+        112000   94000   87000  103000   76000   89000   65000   78000
+         56000   67000   48000   58000   42000   38000   45000   40000
+         35000   38000   32000   29000   34000   27000   30000   25000
+         28000   24000   22000   19000
+      </intensityArray>
+    </spectrum>
+  </spectrumList>
+
+</pcml>
