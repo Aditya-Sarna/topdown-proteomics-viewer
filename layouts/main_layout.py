@@ -497,38 +497,6 @@ def _stores():
 # Root layout
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _splash():
-    atom_colors = ['#42a5f5','#ef5350','#66bb6a','#ffa726','#ab47bc','#26c6da','#d4e157','#ec407a']
-    inner_colors = ['#80cbc4','#fff176','#ce93d8','#80deea','#ffcc80','#bcaaa4']
-    outer_atoms = [html.Div(className='mol-atom', style={
-        'background': c,
-        'transform': 'rotate({}deg) translateX(72px)'.format(i * 45),
-    }) for i, c in enumerate(atom_colors)]
-    inner_atoms = [html.Div(className='mol-atom mol-atom-sm', style={
-        'background': c,
-        'transform': 'rotate({}deg) translateX(52px)'.format(i * 60 + 30),
-    }) for i, c in enumerate(inner_colors)]
-    return html.Div([
-        html.Div([
-            html.Div([
-                html.Div([
-                    html.Div(outer_atoms, className='mol-ring'),
-                    html.Div(inner_atoms, className='mol-ring2'),
-                    html.Div(className='mol-center mol-pulse'),
-                ], className='mol-scene'),
-            ], className='mol-wrapper'),
-            html.Div("Top-Down Proteomics Viewer", className='splash-title'),
-            html.Div("Single-spectrum proteoform analysis", className='splash-sub'),
-            html.Div([
-                html.Span(className='splash-dot'),
-                html.Span(className='splash-dot'),
-                html.Span(className='splash-dot'),
-            ], className='splash-dots'),
-        ], id='splash-screen'),
-        dcc.Interval(id='splash-interval', interval=2600, max_intervals=1),
-    ])
-
-
 def create_layout():
     tabs = dbc.Tabs([
         _tab_spectrum(),
@@ -559,7 +527,6 @@ def create_layout():
     })
 
     return html.Div([
-        _splash(),
         _stores(),
         _navbar(),
         body,
