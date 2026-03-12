@@ -53,9 +53,51 @@
   40%           { transform: scale(1.2); opacity: 1; }
 }
 
-/* ── protein SVG animations ─────────────────────────────────────── */
-.mol-ring    { animation: mol-spin  8s linear infinite; transform-origin: 50% 50%; }
-.mol-ring2   { animation: mol-spin2 6s linear infinite; transform-origin: 50% 50%; }
+/* ── protein molecule (CSS div atoms) ───────────────────────────── */
+.mol-wrapper {
+    width: 200px; height: 200px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+}
+.mol-scene {
+    position: relative;
+    width: 200px; height: 200px;
+}
+.mol-ring {
+    position: absolute; inset: 0;
+    animation: mol-spin 8s linear infinite;
+    transform-origin: 50% 50%;
+}
+.mol-ring2 {
+    position: absolute; inset: 0;
+    animation: mol-spin2 6s linear infinite;
+    transform-origin: 50% 50%;
+}
+.mol-atom {
+    position: absolute;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    top: calc(50% - 7px);
+    left: calc(50% - 7px);
+    transform-origin: 7px 7px;
+    opacity: 0.9;
+    box-shadow: 0 0 6px rgba(255,255,255,0.4);
+}
+.mol-atom-sm {
+    width: 10px; height: 10px;
+    top: calc(50% - 5px);
+    left: calc(50% - 5px);
+    transform-origin: 5px 5px;
+}
+.mol-center {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    top: calc(50% - 14px);
+    left: calc(50% - 14px);
+    background: #1565c0;
+    border: 2.5px solid #90caf9;
+}
 .mol-pulse   { animation: mol-pulse 2s ease-in-out infinite; }
 @keyframes mol-spin  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
 @keyframes mol-spin2 { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
