@@ -130,34 +130,228 @@ def parse_feature_table(text: str, filename: str = 'features') -> List[Feature]:
 
 
 # ---------------------------------------------------------------------------
+# PCML (Protein Chemical Markup Language) parser
+# ---------------------------------------------------------------------------
+
+def parse_pcml(file_bytes: bytes, filename: str) -> Tuple[List[Spectrum], List[Feature], dict]:
+    """Parse a PCML file.
+
+    PCML is an XML-based format that encodes protein sequences with chemical
+    modifications, elution features, and tandem mass spectra in a single file.
+
+    Supported spectrum peak encodings
+    ----------------------------------
+    * Child elements <mzArray> / <intensityArray> with text content that is
+      either base64-encoded (attribute ``encoding="base64"``) or
+      whitespace-/comma-separated plain numbers (default).
+    * Inline attributes on <spectrum>: ``mz="1.0 2.0"  intensity="100 200"``.
+    * A single <peaks> child with interleaved (mz, intensity) pairs.
+
+    Returns
+    -------
+    (spectra, features, protein_info)
+    protein_info : dict with keys ``name``, ``sequence``, ``modifications``
+                   (list of dicts with keys position/name/mass_shift/residue).
+    """
+    try:
+        from lxml import etree
+    except ImportError:
+        print("lxml is required to parse PCML files")
+        return [], [], {}
+
+    try:
+        root = etree.fromstring(file_bytes)
+    except etree.XMLSyntaxError as exc:
+        print(f"PCML XML syntax error: {exc}")
+        return [], [], {}
+
+    def _local(el) -> str:
+        tag = el.tag
+        return tag.split('}', 1)[-1] if '}' in tag else tag
+
+    def _float(v, default: float = 0.0) -> float:
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return default
+
+    def _int(v, default: int = 0) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return default
+
+    def _decode_array(el) -> np.ndarray:
+        """Decode an mzArray / intensityArray element."""
+        if el is None or not (el.text or '').strip():
+            return np.array([], dtype=np.float64)
+        text = el.text.strip()
+        if el.get('encoding', 'text') == 'base64':
+            import base64 as _b64
+            dtype_str = el.get('dtype', 'float64')
+            dtype = np.float64 if dtype_str in ('float64', 'f8') else np.float32
+            raw = _b64.b64decode(text)
+            return np.frombuffer(raw, dtype=dtype).copy().astype(np.float64)
+        # plain text — comma- or whitespace-separated
+        sep = ',' if ',' in text else None
+        parts = text.split(sep) if sep else text.split()
+        return np.array([float(p) for p in parts if p.strip()], dtype=np.float64)
+
+    spectra: List[Spectrum] = []
+    features: List[Feature] = []
+    protein_info: dict = {}
+
+    # ── protein / proteoform ──────────────────────────────────────────────
+    for prot_el in root.iter():
+        if _local(prot_el) != 'protein':
+            continue
+        name = prot_el.get('name', prot_el.get('id', ''))
+        seq_el = next((c for c in prot_el if _local(c) == 'sequence'), None)
+        sequence = (seq_el.text or '').strip() if seq_el is not None else prot_el.get('sequence', '')
+        mods: List[dict] = []
+        for child in prot_el:
+            if _local(child) == 'proteoform':
+                for mod_el in child:
+                    if _local(mod_el) == 'modification':
+                        mods.append({
+                            'position':   _int(mod_el.get('position', 0)),
+                            'name':       mod_el.get('name', mod_el.get('type', '')),
+                            'mass_shift': _float(mod_el.get('mass_shift', mod_el.get('massShift', 0.0))),
+                            'residue':    mod_el.get('residue', ''),
+                        })
+            elif _local(child) == 'modification':
+                mods.append({
+                    'position':   _int(child.get('position', 0)),
+                    'name':       child.get('name', child.get('type', '')),
+                    'mass_shift': _float(child.get('mass_shift', child.get('massShift', 0.0))),
+                    'residue':    child.get('residue', ''),
+                })
+        if not protein_info and (sequence or name):
+            protein_info = {'name': name, 'sequence': sequence, 'modifications': mods}
+
+    # ── features ─────────────────────────────────────────────────────────
+    feat_idx = 0
+    for feat_el in root.iter():
+        if _local(feat_el) != 'feature':
+            continue
+        mz = _float(feat_el.get('mz', feat_el.get('mz_apex', 0)))
+        rt = _float(feat_el.get('rt', feat_el.get('rt_apex', 0)))
+        features.append(Feature(
+            feature_id=feat_el.get('id', str(feat_idx)),
+            mz_apex=mz,
+            rt_apex=rt,
+            rt_start=_float(feat_el.get('rt_start',  rt - 1.0)),
+            rt_end=_float(feat_el.get('rt_end',    rt + 1.0)),
+            mz_start=_float(feat_el.get('mz_start', mz - 0.01)),
+            mz_end=_float(feat_el.get('mz_end',   mz + 0.01)),
+            intensity=_float(feat_el.get('intensity', feat_el.get('abundance', 1.0))),
+            charge=_int(feat_el.get('charge', feat_el.get('charge_state', 1))),
+            monoisotopic_mass=_float(feat_el.get('mass', feat_el.get('monoisotopic_mass', 0.0))),
+            sequence=feat_el.get('sequence', ''),
+            proteoform_id=feat_el.get('proteoform_id', feat_el.get('proteoform', '')),
+        ))
+        feat_idx += 1
+
+    # ── spectra ───────────────────────────────────────────────────────────
+    for spec_el in root.iter():
+        if _local(spec_el) != 'spectrum':
+            continue
+        scan_id   = spec_el.get('id', spec_el.get('scan_id', f'scan_{len(spectra) + 1}'))
+        ms_level  = _int(spec_el.get('ms_level', 2))
+        rt        = _float(spec_el.get('rt', spec_el.get('retention_time', 0.0)))
+        prec_mz   = _float(spec_el.get('precursor_mz', 0.0))
+        prec_z    = _int(spec_el.get('precursor_charge', 0))
+        prec_mass = _float(spec_el.get('precursor_mass',
+                           prec_mz * prec_z - prec_z * 1.007276 if prec_z else 0.0))
+
+        mz_el  = next((c for c in spec_el if _local(c) in ('mzArray',  'mz_array',  'mz')), None)
+        int_el = next((c for c in spec_el if _local(c) in ('intensityArray', 'intensity_array', 'intensity')), None)
+
+        if spec_el.get('mz') and mz_el is None:
+            # inline attribute encoding
+            mz_arr  = np.array([float(x) for x in spec_el.get('mz', '').split()], dtype=np.float64)
+            int_arr = np.array([float(x) for x in spec_el.get('intensity', '').split()], dtype=np.float64)
+        elif mz_el is not None:
+            mz_arr  = _decode_array(mz_el)
+            int_arr = _decode_array(int_el) if int_el is not None else np.ones(len(mz_arr))
+        else:
+            peaks_el = next((c for c in spec_el if _local(c) == 'peaks'), None)
+            if peaks_el is not None and (peaks_el.text or '').strip():
+                arr = _decode_array(peaks_el)
+                if len(arr) % 2 == 0 and len(arr) > 0:
+                    mz_arr, int_arr = arr[0::2], arr[1::2]
+                else:
+                    mz_arr, int_arr = arr, np.ones(len(arr))
+            else:
+                continue  # no peak data — skip this spectrum
+
+        if len(mz_arr) == 0:
+            continue
+
+        order = np.argsort(mz_arr)
+        spectra.append(Spectrum(
+            scan_id=scan_id,
+            mz_array=mz_arr[order],
+            intensity_array=int_arr[order] if len(int_arr) == len(mz_arr) else np.ones(len(mz_arr)),
+            retention_time=rt,
+            precursor_mz=prec_mz,
+            precursor_charge=prec_z,
+            precursor_mass=prec_mass,
+            ms_level=ms_level,
+            file_name=filename,
+        ))
+
+    return spectra, features, protein_info
+
+
+# ---------------------------------------------------------------------------
 # Dash upload helper
 # ---------------------------------------------------------------------------
 
-def decode_upload(contents: str, filename: str) -> Tuple[List[Spectrum], List[Feature], str]:
-    """Decode a Dash dcc.Upload file (base64) and parse it appropriately."""
+def decode_upload(contents: str, filename: str) -> Tuple[List[Spectrum], List[Feature], str, Optional[dict]]:
+    """Decode a Dash dcc.Upload file (base64) and parse it appropriately.
+
+    Returns
+    -------
+    (spectra, features, message, protein_info)
+    protein_info is populated for PCML files (dict with keys name/sequence/modifications);
+    it is ``None`` for all other formats.
+    """
     if not contents:
-        return [], [], "No file uploaded."
+        return [], [], "No file uploaded.", None
     try:
         _content_type, content_string = contents.split(',', 1)
         decoded = base64.b64decode(content_string)
         fn_lower = filename.lower()
-        if fn_lower.endswith('.mzml'):
+        if fn_lower.endswith('.pcml'):
+            spectra, feats, pinfo = parse_pcml(decoded, filename)
+            parts = []
+            if spectra:
+                parts.append(f"{len(spectra)} spectr{'a' if len(spectra) != 1 else 'um'}")
+            if feats:
+                parts.append(f"{len(feats)} feature{'s' if len(feats) != 1 else ''}")
+            if pinfo.get('sequence'):
+                parts.append(f"protein '{pinfo.get('name', 'unknown')}'")
+            msg = (f"Loaded {', '.join(parts)} from {filename}"
+                   if parts else f"No data found in {filename}")
+            return spectra, feats, msg, pinfo
+        elif fn_lower.endswith('.mzml'):
             spectra = parse_mzml(decoded, filename)
-            return spectra, [], f"Loaded {len(spectra)} MS2 spectra from {filename}"
+            return spectra, [], f"Loaded {len(spectra)} MS2 spectra from {filename}", None
         elif fn_lower.endswith(('.csv', '.tsv', '.txt')):
             text = decoded.decode('utf-8', errors='replace')
             # Heuristic: if it has rt_start / rt column treat as feature table
             first_line = text.split('\n')[0].lower()
             if any(k in first_line for k in ('rt_apex', 'rt_start', 'feature_id')):
                 feats = parse_feature_table(text, filename)
-                return [], feats, f"Loaded {len(feats)} features from {filename}"
+                return [], feats, f"Loaded {len(feats)} features from {filename}", None
             else:
                 spec = parse_csv_peaks(text, filename)
                 if spec:
-                    return [spec], [], f"Loaded spectrum from {filename}"
-        return [], [], f"Unsupported file format: {filename}"
+                    return [spec], [], f"Loaded spectrum from {filename}", None
+        return [], [], f"Unsupported file format: {filename}", None
     except Exception as e:
-        return [], [], f"Error loading {filename}: {e}"
+        return [], [], f"Error loading {filename}: {e}", None
 
 
 # ---------------------------------------------------------------------------

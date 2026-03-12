@@ -79,10 +79,11 @@ def _sidebar():
 
         # ── Data Input ─────────────────────────────────────────────────────
         _section("Data Input",
-            _label("Upload Spectrum (.mzML / peak CSV)"),
+            _label("Upload Spectrum (.mzML / .pcml / peak CSV)"),
             dcc.Upload(
                 id='upload-spectrum',
-                children=html.Div(['Drag & drop or ', html.A('browse', style={'color': ACCENT})]),
+                children=html.Div(['Drag & drop or ', html.A('browse', style={'color': ACCENT}),
+                                   html.Span(' (.mzML, .pcml, .csv)', style={'color': TEXT_MUTED, 'fontSize': '0.70rem'})]),
                 style={
                     'borderWidth': '1px', 'borderStyle': 'dashed',
                     'borderRadius': '4px', 'borderColor': '#cccccc',

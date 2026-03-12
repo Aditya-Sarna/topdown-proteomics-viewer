@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from src.data.parsers import (
-    parse_mzml, parse_csv_peaks, parse_feature_table,
+    parse_mzml, parse_csv_peaks, parse_feature_table, parse_pcml,
     generate_demo_spectrum, generate_demo_features,
     UBIQUITIN,
 )
@@ -47,19 +47,32 @@ def _clean_seq(seq: str) -> str:
     return "".join(c for c in seq.upper() if c in AA_MASSES)
 
 
-def _load_spectrum_file(uploaded) -> tuple[list, str]:
+def _load_spectrum_file(uploaded) -> tuple[list, list, dict, str]:
+    """Return (spectra, features, protein_info, message)."""
     raw = uploaded.read()
     fname = uploaded.name.lower()
+    if fname.endswith(".pcml"):
+        spectra, feats, pinfo = parse_pcml(raw, uploaded.name)
+        parts = []
+        if spectra:
+            parts.append(f"{len(spectra)} spectr{'a' if len(spectra) != 1 else 'um'}")
+        if feats:
+            parts.append(f"{len(feats)} feature{'s' if len(feats) != 1 else ''}")
+        if pinfo.get('sequence'):
+            parts.append(f"protein '{pinfo.get('name', 'unknown')}'")
+        msg = (f"Loaded {', '.join(parts)} from {uploaded.name}"
+               if parts else f"No data found in {uploaded.name}")
+        return spectra, feats, pinfo, msg
     if fname.endswith(".mzml"):
         spectra = parse_mzml(raw, uploaded.name)
-        return spectra, f"Loaded {len(spectra)} MS2 scan(s) from {uploaded.name}"
+        return spectra, [], {}, f"Loaded {len(spectra)} MS2 scan(s) from {uploaded.name}"
     elif fname.endswith((".csv", ".tsv", ".txt")):
         text = raw.decode("utf-8", errors="replace")
         spec = parse_csv_peaks(text, uploaded.name)
         if spec:
-            return [spec], f"Loaded spectrum from {uploaded.name}"
-        return [], f"Could not parse peak list from {uploaded.name}"
-    return [], f"Unsupported format: {uploaded.name}"
+            return [spec], [], {}, f"Loaded spectrum from {uploaded.name}"
+        return [], [], {}, f"Could not parse peak list from {uploaded.name}"
+    return [], [], {}, f"Unsupported format: {uploaded.name}"
 
 
 def _load_features_file(uploaded) -> tuple[list, str]:
@@ -93,15 +106,24 @@ with st.sidebar:
 
 
     uploaded_spec = st.file_uploader(
-        "Upload Spectrum (.mzML / peak CSV)",
-        type=["mzml", "csv", "tsv", "txt"],
+        "Upload Spectrum (.mzML / .pcml / peak CSV)",
+        type=["pcml", "mzml", "csv", "tsv", "txt"],
         key="upload_spectrum",
     )
     if uploaded_spec:
-        spectra, msg = _load_spectrum_file(uploaded_spec)
-        if spectra:
-            st.session_state.spectra = spectra
-            st.session_state.scan_idx = 0
+        spectra, feats, pinfo, msg = _load_spectrum_file(uploaded_spec)
+        if spectra or feats or pinfo.get('sequence'):
+            if spectra:
+                st.session_state.spectra = spectra
+                st.session_state.scan_idx = 0
+            if feats:
+                st.session_state.features = feats
+            if pinfo.get('sequence'):
+                st.session_state.protein = {
+                    'name': pinfo.get('name', ''),
+                    'sequence': _clean_seq(pinfo['sequence']),
+                    'mass': calc_sequence_mass(_clean_seq(pinfo['sequence'])),
+                }
             st.session_state.search_results = []
             st.session_state.matched_ions = []
             st.session_state.selected_result = None

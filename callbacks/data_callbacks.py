@@ -44,29 +44,45 @@ def register_callbacks(app):
         )
         return spectra_data, opts, 0, src_note, 'Ubiquitin', UBIQUITIN
 
-    # ── Upload spectrum ────────────────────────────────────────────────────
+    # ── Upload spectrum (also handles PCML files) ────────────────────────
     @app.callback(
         Output('store-spectra',          'data', allow_duplicate=True),
         Output('scan-selector',          'options', allow_duplicate=True),
         Output('scan-selector',          'value', allow_duplicate=True),
         Output('upload-spectrum-status', 'children', allow_duplicate=True),
+        Output('store-features',         'data', allow_duplicate=True),
+        Output('upload-features-status', 'children', allow_duplicate=True),
+        Output('protein-name',           'value', allow_duplicate=True),
+        Output('protein-sequence',       'value', allow_duplicate=True),
         Input('upload-spectrum', 'contents'),
         State('upload-spectrum', 'filename'),
         prevent_initial_call=True,
     )
     def load_spectrum(contents, filename):
         if not contents:
-            return no_update, no_update, no_update, no_update
+            return (no_update,) * 8
 
-        spectra, _, msg = decode_upload(contents, filename or 'file')
-        if not spectra:
-            return [], [], None, f'Error: {msg}'
+        spectra, feats, msg, pinfo = decode_upload(contents, filename or 'file')
+        if not spectra and not feats and not (pinfo or {}).get('sequence'):
+            return [], [], None, f'Error: {msg}', no_update, no_update, no_update, no_update
+
+        # spectra
         data = [s.to_dict() for s in spectra]
         opts = [{'label': f"{s.scan_id}  RT={s.retention_time:.2f}  "
                           f"precursor={s.precursor_mz:.3f}",
                  'value': i}
                 for i, s in enumerate(spectra)]
-        return data, opts, 0, f'Loaded: {msg}'
+        scan_val = 0 if spectra else no_update
+
+        # features (only update store when PCML contained features)
+        feats_data   = [f.to_dict() for f in feats] if feats else no_update
+        feats_status = f'{len(feats)} features loaded (PCML)' if feats else no_update
+
+        # protein (only populate when PCML contained protein info)
+        prot_name = pinfo.get('name', '') if pinfo else no_update
+        prot_seq  = pinfo.get('sequence', '') if pinfo else no_update
+
+        return data, opts, scan_val, f'Loaded: {msg}', feats_data, feats_status, prot_name, prot_seq
 
     # ── Demo — also loads features ─────────────────────────────────────────
     @app.callback(
@@ -90,7 +106,7 @@ def register_callbacks(app):
     def load_features(contents, filename):
         if not contents:
             return no_update, no_update
-        _, features, msg = decode_upload(contents, filename or 'file')
+        _, features, msg, _ = decode_upload(contents, filename or 'file')
         if not features:
             return [], f'Error: {msg}'
         return [f.to_dict() for f in features], f'Loaded: {msg}'
