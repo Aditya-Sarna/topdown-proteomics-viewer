@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  demo.pcml — Top-Down Proteomics Viewer sample file
+  Protein: Human Ubiquitin (P0CG48), 76 aa
+  Simulated ECD spectrum: precursor [M+7H]7+ at m/z 1224.55
+-->
+<pcml version="1.0">
+
+  <protein id="P0CG48" name="Ubiquitin">
+    <sequence>MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG</sequence>
+    <proteoform id="pf1">
+      <modification position="1"  name="Acetylation"    mass_shift="42.0106"  residue="M"/>
+      <modification position="76" name="GlyGly (K-Ub)"  mass_shift="114.0429" residue="G"/>
+    </proteoform>
+  </protein>
+
+  <featureList>
+    <feature id="F1" mz="1224.5525" rt="45.20" rt_start="44.50" rt_end="46.10"
+             mz_start="1224.50" mz_end="1224.61"
+             charge="7" mass="8559.617" intensity="2450000"/>
+    <feature id="F2" mz="1020.4706" rt="45.18" rt_start="44.48" rt_end="46.08"
+             mz_start="1020.42" mz_end="1020.52"
+             charge="8" mass="8155.710" intensity="980000"/>
+  </featureList>
+
+  <spectrumList>
+    <spectrum id="scan=1042" ms_level="2" rt="45.20"
+              precursor_mz="1224.5525" precursor_charge="7">
+      <!-- c-ions (charge 1+) -->
+      <mzArray>
+        115.0866  186.1237  287.1714  386.2398  487.2875  600.3716  713.4556
+        800.4876  901.5353  1000.6037 1099.6721 1212.7562 1313.8046 1414.8523
+        1527.9363 1628.9840 1742.0681 1857.0950 1972.1219 2069.1743 2200.2355
+        2315.2624 2414.3108 2513.3792 2628.4061 2727.4745 2826.5429 2955.5856
+        3068.6697 3181.7537 3280.8221 3379.8905 3492.9746 3607.0015 3721.0884
+        3853.1289 3953.1620 4052.2304 4181.2731 4296.3000 4397.3484 4526.3911
+        4625.4595 4754.5022 4855.5506 4984.5933 5099.6202 5200.6886
+      </mzArray>
+      <intensityArray>
+        42000  88000  54000  76000  92000  61000  85000
+        47000  63000  71000  55000  80000  68000  90000
+        57000  74000  100000 82000  66000  78000  95000
+        59000  87000  73000  64000  91000  83000  70000
+        76000  58000  89000  67000  94000  72000  61000
+        85000  48000  79000  93000  65000  88000  71000
+        56000  82000  69000  97000  75000  60000
+      </intensityArray>
+    </spectrum>
+  </spectrumList>
+
+</pcml>

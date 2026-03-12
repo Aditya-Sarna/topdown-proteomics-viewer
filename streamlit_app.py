@@ -37,6 +37,8 @@ _DEFAULTS = {
     "search_results":  [],
     "matched_ions":    [],
     "selected_result": None,
+    "_prot_name":      "",
+    "_prot_seq":       "",
 }
 for _k, _v in _DEFAULTS.items():
     if _k not in st.session_state:
@@ -94,10 +96,13 @@ with st.sidebar:
         st.session_state.scan_idx = 0
         feats = generate_demo_features()
         st.session_state.features = feats
+        clean = _clean_seq(UBIQUITIN)
+        st.session_state["_prot_name"] = "Ubiquitin"
+        st.session_state["_prot_seq"]  = clean
         st.session_state.protein = {
             "name": "Ubiquitin",
-            "sequence": UBIQUITIN,
-            "mass": calc_sequence_mass(_clean_seq(UBIQUITIN)),
+            "sequence": clean,
+            "mass": calc_sequence_mass(clean),
         }
         st.session_state.search_results = []
         st.session_state.matched_ions = []
@@ -119,10 +124,13 @@ with st.sidebar:
             if feats:
                 st.session_state.features = feats
             if pinfo.get('sequence'):
+                clean = _clean_seq(pinfo['sequence'])
+                st.session_state['_prot_name'] = pinfo.get('name', '')
+                st.session_state['_prot_seq']  = clean
                 st.session_state.protein = {
                     'name': pinfo.get('name', ''),
-                    'sequence': _clean_seq(pinfo['sequence']),
-                    'mass': calc_sequence_mass(_clean_seq(pinfo['sequence'])),
+                    'sequence': clean,
+                    'mass': calc_sequence_mass(clean),
                 }
             st.session_state.search_results = []
             st.session_state.matched_ions = []
@@ -175,12 +183,12 @@ with st.sidebar:
     st.markdown("##### PROTEIN")
     prot_name = st.text_input(
         "Protein Name",
-        value=st.session_state.protein.get("name", ""),
+        key="_prot_name",
         placeholder="e.g. Ubiquitin",
     )
     prot_seq_raw = st.text_area(
         "Sequence (single-letter)",
-        value=st.session_state.protein.get("sequence", ""),
+        key="_prot_seq",
         placeholder="MQIFVKTLTGK…",
         height=100,
     )
