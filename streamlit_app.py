@@ -1,5 +1,6 @@
 
 import io
+import os
 import csv
 import json
 import base64
@@ -10,8 +11,6 @@ import streamlit as st
 
 from src.data.parsers import (
     parse_mzml, parse_csv_peaks, parse_feature_table, parse_pcml,
-    generate_demo_spectrum, generate_demo_features,
-    UBIQUITIN,
 )
 from src.data.models import Spectrum, Feature, Proteoform, FragmentIon, SearchResult
 from src.analysis.mass_utils import calc_sequence_mass, suggest_modifications, ppm_error
@@ -47,6 +46,39 @@ for _k, _v in _DEFAULTS.items():
 
 def _clean_seq(seq: str) -> str:
     return "".join(c for c in seq.upper() if c in AA_MASSES)
+
+
+_DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "demo_data")
+
+
+def _load_demo_file(filename: str) -> tuple[list, list, dict, str]:
+    """Read a file from demo_data/ by name and return (spectra, feats, pinfo, msg)."""
+    path = os.path.join(_DEMO_DIR, filename)
+    with open(path, "rb") as _fh:
+        raw = _fh.read()
+    fname = filename.lower()
+    if fname.endswith(".pcml"):
+        spectra, feats, pinfo = parse_pcml(raw, filename)
+        parts = []
+        if spectra:
+            parts.append(f"{len(spectra)} spectr{'a' if len(spectra) != 1 else 'um'}")
+        if feats:
+            parts.append(f"{len(feats)} feature{'s' if len(feats) != 1 else ''}")
+        if pinfo.get('sequence'):
+            parts.append(f"protein '{pinfo.get('name', 'unknown')}'")
+        msg = (f"Loaded {', '.join(parts)} from {filename}"
+               if parts else f"No data found in {filename}")
+        return spectra, feats, pinfo, msg
+    if fname.endswith(".mzml"):
+        spectra = parse_mzml(raw, filename)
+        return spectra, [], {}, f"Loaded {len(spectra)} MS2 scan(s) from {filename}"
+    if fname.endswith((".csv", ".tsv", ".txt")):
+        text = raw.decode("utf-8", errors="replace")
+        spec = parse_csv_peaks(text, filename)
+        if spec:
+            return [spec], [], {}, f"Loaded spectrum from {filename}"
+        return [], [], {}, f"Could not parse peak list from {filename}"
+    return [], [], {}, f"Unsupported format: {filename}"
 
 
 def _load_spectrum_file(uploaded) -> tuple[list, list, dict, str]:
@@ -88,26 +120,43 @@ with st.sidebar:
     st.caption("v1.0 — Single-spectrum proteoform analysis")
     st.divider()
 
-    st.markdown("##### DATA INPUT")
+    st.markdown("##### TEST DATASETS / FILES")
 
-    if st.button("Load Demo", use_container_width=True, type="secondary"):
-        demo_spec = generate_demo_spectrum()
-        st.session_state.spectra = [demo_spec]
-        st.session_state.scan_idx = 0
-        feats = generate_demo_features()
-        st.session_state.features = feats
-        clean = _clean_seq(UBIQUITIN)
-        st.session_state["_prot_name"] = "Ubiquitin"
-        st.session_state["_prot_seq"]  = clean
-        st.session_state.protein = {
-            "name": "Ubiquitin",
-            "sequence": clean,
-            "mass": calc_sequence_mass(clean),
-        }
-        st.session_state.search_results = []
-        st.session_state.matched_ions = []
-        st.session_state.selected_result = None
-        st.success("Demo loaded.")
+    _demo_files = sorted(f for f in os.listdir(_DEMO_DIR) if not f.startswith("."))
+    _selected_demo = st.selectbox(
+        "Select dataset",
+        options=["— select a dataset —"] + _demo_files,
+        key="demo_file_select",
+        label_visibility="collapsed",
+    )
+    _demo_ready = _selected_demo != "— select a dataset —"
+    if st.button("Load", use_container_width=True, type="secondary", disabled=not _demo_ready):
+        _d_spectra, _d_feats, _d_pinfo, _d_msg = _load_demo_file(_selected_demo)
+        if _d_spectra or _d_feats or _d_pinfo.get('sequence'):
+            if _d_spectra:
+                st.session_state.spectra = _d_spectra
+                st.session_state.scan_idx = 0
+            if _d_feats:
+                st.session_state.features = _d_feats
+            if _d_pinfo.get('sequence'):
+                _clean = _clean_seq(_d_pinfo['sequence'])
+                st.session_state["_prot_name"] = _d_pinfo.get('name', '')
+                st.session_state["_prot_seq"]  = _clean
+                st.session_state.protein = {
+                    'name': _d_pinfo.get('name', ''),
+                    'sequence': _clean,
+                    'mass': calc_sequence_mass(_clean),
+                }
+            else:
+                st.session_state["_prot_name"] = ""
+                st.session_state["_prot_seq"]  = ""
+                st.session_state.protein = {}
+            st.session_state.search_results = []
+            st.session_state.matched_ions = []
+            st.session_state.selected_result = None
+            st.success(_d_msg)
+        else:
+            st.error(_d_msg)
 
 
     uploaded_spec = st.file_uploader(
@@ -322,7 +371,7 @@ with tab_spec:
         fig = create_spectrum_plot(spectrum, ions if ions else None)
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("Load a spectrum or click **Load Demo** to begin.")
+        st.info("Upload a spectrum file or select a dataset from **Test Datasets / Files** to begin.")
 
 with tab_seq:
     show_cleavage = st.checkbox("Show cleavage ticks", value=True, key="show_cleavage")
@@ -517,4 +566,4 @@ with tab_features:
         )
         st.plotly_chart(fig_trace, use_container_width=True, key="intensity_trace_chart")
     else:
-        st.info("Load a feature table CSV or click **Load Demo** to see the feature map.")
+        st.info("Upload a feature table CSV or load one of the **Test Datasets / Files** to see the feature map.")
