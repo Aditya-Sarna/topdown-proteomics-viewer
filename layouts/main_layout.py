@@ -497,7 +497,68 @@ def _stores():
 # Root layout
 # ──────────────────────────────────────────────────────────────────────────────
 
-def create_layout():
+def _splash():
+    protein_svg = html.Div([
+        html.Svg(
+            viewBox="0 0 200 200",
+            style={'width': '220px', 'height': '220px'},
+            children=[
+                html.Circle(cx='100', cy='100', r='72',
+                    style={'fill':'none','stroke':'rgba(100,181,246,0.25)','strokeWidth':'1.5'}),
+                html.Circle(cx='100', cy='100', r='52',
+                    style={'fill':'none','stroke':'rgba(100,181,246,0.18)','strokeWidth':'1'}),
+                html.G(className='mol-ring', children=[
+                    *[html.Circle(
+                        cx=str(round(100 + 72*__import__('math').cos(i*3.14159/4), 1)),
+                        cy=str(round(100 + 72*__import__('math').sin(i*3.14159/4), 1)),
+                        r='7',
+                        style={'fill': c, 'opacity': '0.9'}
+                    ) for i, c in enumerate(['#42a5f5','#ef5350','#66bb6a','#ffa726',
+                                             '#ab47bc','#26c6da','#d4e157','#ec407a'])],
+                    *[html.Line(
+                        x1=str(round(100 + 72*__import__('math').cos(i*3.14159/4), 1)),
+                        y1=str(round(100 + 72*__import__('math').sin(i*3.14159/4), 1)),
+                        x2=str(round(100 + 72*__import__('math').cos((i+1)*3.14159/4), 1)),
+                        y2=str(round(100 + 72*__import__('math').sin((i+1)*3.14159/4), 1)),
+                        style={'stroke':'rgba(144,202,249,0.4)','strokeWidth':'1.5'}
+                    ) for i in range(8)],
+                ]),
+                html.G(className='mol-ring2', children=[
+                    *[html.Circle(
+                        cx=str(round(100 + 52*__import__('math').cos(i*3.14159/3 + 0.5), 1)),
+                        cy=str(round(100 + 52*__import__('math').sin(i*3.14159/3 + 0.5), 1)),
+                        r='5',
+                        style={'fill': c, 'opacity': '0.85'}
+                    ) for i, c in enumerate(['#80cbc4','#fff176','#ce93d8','#80deea','#ffcc80','#bcaaa4'])],
+                    *[html.Line(
+                        x1=str(round(100 + 52*__import__('math').cos(i*3.14159/3 + 0.5), 1)),
+                        y1=str(round(100 + 52*__import__('math').sin(i*3.14159/3 + 0.5), 1)),
+                        x2=str(round(100 + 52*__import__('math').cos((i+1)*3.14159/3 + 0.5), 1)),
+                        y2=str(round(100 + 52*__import__('math').sin((i+1)*3.14159/3 + 0.5), 1)),
+                        style={'stroke':'rgba(178,235,242,0.35)','strokeWidth':'1.2'}
+                    ) for i in range(6)],
+                ]),
+                html.Circle(cx='100', cy='100', r='14',
+                    className='mol-pulse',
+                    style={'fill':'#1565c0','stroke':'#90caf9','strokeWidth':'2.5'}),
+                html.Circle(cx='100', cy='100', r='6',
+                    style={'fill':'#e3f2fd'}),
+            ]
+        ),
+        html.Div("Top-Down Proteomics Viewer", className='splash-title'),
+        html.Div("Single-spectrum proteoform analysis", className='splash-sub'),
+        html.Div([
+            html.Span(className='splash-dot'),
+            html.Span(className='splash-dot'),
+            html.Span(className='splash-dot'),
+        ], className='splash-dots'),
+    ], id='splash-screen')
+    return html.Div([
+        protein_svg,
+        dcc.Interval(id='splash-interval', interval=2600, max_intervals=1),
+    ])
+
+
     tabs = dbc.Tabs([
         _tab_spectrum(),
         _tab_sequence(),
@@ -527,6 +588,7 @@ def create_layout():
     })
 
     return html.Div([
+        _splash(),
         _stores(),
         _navbar(),
         body,
