@@ -129,34 +129,44 @@ with st.sidebar:
         key="demo_file_select",
         label_visibility="collapsed",
     )
-    _demo_ready = _selected_demo != "— select a dataset —"
-    if st.button("Load", use_container_width=True, type="secondary", disabled=not _demo_ready):
-        _d_spectra, _d_feats, _d_pinfo, _d_msg = _load_demo_file(_selected_demo)
-        if _d_spectra or _d_feats or _d_pinfo.get('sequence'):
-            if _d_spectra:
-                st.session_state.spectra = _d_spectra
-                st.session_state.scan_idx = 0
-            if _d_feats:
-                st.session_state.features = _d_feats
-            if _d_pinfo.get('sequence'):
-                _clean = _clean_seq(_d_pinfo['sequence'])
-                st.session_state["_prot_name"] = _d_pinfo.get('name', '')
-                st.session_state["_prot_seq"]  = _clean
-                st.session_state.protein = {
-                    'name': _d_pinfo.get('name', ''),
-                    'sequence': _clean,
-                    'mass': calc_sequence_mass(_clean),
-                }
-            else:
-                st.session_state["_prot_name"] = ""
-                st.session_state["_prot_seq"]  = ""
-                st.session_state.protein = {}
-            st.session_state.search_results = []
-            st.session_state.matched_ions = []
-            st.session_state.selected_result = None
-            st.success(_d_msg)
+    if st.button("Load", use_container_width=True, type="secondary"):
+        _chosen = st.session_state.get("demo_file_select", "— select a dataset —")
+        if _chosen == "— select a dataset —":
+            st.warning("Please select a dataset first.")
         else:
-            st.error(_d_msg)
+            _d_spectra, _d_feats, _d_pinfo, _d_msg = _load_demo_file(_chosen)
+            if _d_spectra or _d_feats or _d_pinfo.get('sequence'):
+                if _d_spectra:
+                    st.session_state.spectra = _d_spectra
+                    st.session_state.scan_idx = 0
+                if _d_feats:
+                    st.session_state.features = _d_feats
+                if _d_pinfo.get('sequence'):
+                    _clean = _clean_seq(_d_pinfo['sequence'])
+                    st.session_state["_prot_name"] = _d_pinfo.get('name', '')
+                    st.session_state["_prot_seq"]  = _clean
+                    st.session_state.protein = {
+                        'name': _d_pinfo.get('name', ''),
+                        'sequence': _clean,
+                        'mass': calc_sequence_mass(_clean),
+                    }
+                else:
+                    st.session_state["_prot_name"] = ""
+                    st.session_state["_prot_seq"]  = ""
+                    st.session_state.protein = {}
+                st.session_state.search_results = []
+                st.session_state.matched_ions = []
+                st.session_state.selected_result = None
+                st.session_state["_demo_msg"] = ("success", _d_msg)
+            else:
+                st.session_state["_demo_msg"] = ("error", _d_msg)
+            st.rerun()
+    _dm = st.session_state.pop("_demo_msg", None)
+    if _dm:
+        if _dm[0] == "success":
+            st.success(_dm[1])
+        else:
+            st.error(_dm[1])
 
 
     uploaded_spec = st.file_uploader(

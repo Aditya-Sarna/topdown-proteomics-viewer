@@ -167,6 +167,8 @@ def parse_pcml(file_bytes: bytes, filename: str) -> Tuple[List[Spectrum], List[F
 
     def _local(el) -> str:
         tag = el.tag
+        if not isinstance(tag, str):   # comment / PI nodes have callable tags
+            return ''
         return tag.split('}', 1)[-1] if '}' in tag else tag
 
     def _float(v, default: float = 0.0) -> float:
