@@ -2,9 +2,13 @@
 Main Dash layout.
 Structured as: NavBar | Sidebar (controls) | Main content area (5 tabs).
 """
+import os
 from dash import dcc, html, dash_table
 import dash_bootstrap_components as dbc
 from src.data.amino_acids import PTM_DATABASE
+
+_DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
+_DEMO_FILES = sorted(f for f in os.listdir(_DEMO_DIR) if not f.startswith('.'))
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Colour constants
@@ -56,8 +60,17 @@ def _navbar():
                                    style={'color': TEXT_MUTED}), width='auto'),
             ], align='center', className='g-2 flex-grow-1'),
             dbc.Row([
-                dbc.Col(dbc.Button("Load Demo", id='load-demo-btn', color='success',
-                                   size='sm', outline=True, className='me-2'), width='auto'),
+                dbc.Col(html.Div([
+                    dcc.Dropdown(
+                        id='demo-file-select',
+                        options=[{'label': f, 'value': f} for f in _DEMO_FILES],
+                        placeholder='Load Datasets…',
+                        clearable=False,
+                        style={'minWidth': '220px', 'fontSize': '0.8rem', 'display': 'inline-block'},
+                    ),
+                ], style={'display': 'inline-block', 'verticalAlign': 'middle'}), width='auto'),
+                dbc.Col(dbc.Button("Load", id='load-demo-btn', color='success',
+                                   size='sm', outline=True, className='ms-1 me-2'), width='auto'),
                 dbc.Col(dbc.Button("Export", id='export-btn', color='secondary',
                                    size='sm', outline=True), width='auto'),
             ], align='center', className='g-1'),

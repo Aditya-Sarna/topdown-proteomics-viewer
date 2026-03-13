@@ -8,10 +8,26 @@ Data-loading callbacks:
   - Manual mass input     → mass-diff-display, mod-suggestions
 """
 import json
+import os
 from dash import Input, Output, State, no_update
 
 from src.data.parsers import (decode_upload, generate_demo_spectrum,
-                               generate_demo_features, UBIQUITIN, UBIQUITIN_MASS)
+                               generate_demo_features, UBIQUITIN, UBIQUITIN_MASS,
+                               parse_pcml, parse_mzml)
+
+_DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
+
+
+def _load_demo_file(filename: str):
+    """Return (spectra, feats, pinfo) for a file in demo_data/."""
+    path = os.path.join(_DEMO_DIR, filename)
+    with open(path, 'rb') as fh:
+        raw = fh.read()
+    if filename.lower().endswith('.pcml'):
+        return parse_pcml(raw, filename)
+    if filename.lower().endswith('.mzml'):
+        return parse_mzml(raw, filename), [], {}
+    return [], [], {}
 from src.data.models import Spectrum
 from src.analysis.mass_utils import (calc_sequence_mass, suggest_modifications,
                                       ppm_error)
@@ -20,7 +36,7 @@ from src.data.amino_acids import AA_MASSES
 
 def register_callbacks(app):
 
-    # ── Load demo — fills spectrum, features, protein name+sequence ────────
+    # ── Load dataset — fills spectrum, features, protein name+sequence ─────
     @app.callback(
         Output('store-spectra',         'data'),
         Output('scan-selector',         'options'),
@@ -29,9 +45,24 @@ def register_callbacks(app):
         Output('protein-name',          'value'),
         Output('protein-sequence',      'value'),
         Input('load-demo-btn', 'n_clicks'),
+        State('demo-file-select', 'value'),
         prevent_initial_call=True,
     )
-    def load_demo(_):
+    def load_demo(_, selected_file):
+        if selected_file:
+            spectra, feats, pinfo = _load_demo_file(selected_file)
+            if not spectra and not feats and not (pinfo or {}).get('sequence'):
+                return [], [], None, f'No data found in {selected_file}', no_update, no_update
+            opts = [{'label': f"{s.scan_id}  RT={s.retention_time:.2f} min  "
+                              f"precursor={s.precursor_mz:.4f} m/z  z={s.precursor_charge}",
+                     'value': i}
+                    for i, s in enumerate(spectra)]
+            scan_val = 0 if spectra else no_update
+            prot_name = pinfo.get('name', '') if pinfo else no_update
+            prot_seq  = pinfo.get('sequence', '') if pinfo else no_update
+            msg = f'Loaded {len(spectra)} spectrum/a from {selected_file}'
+            return [s.to_dict() for s in spectra], opts, scan_val, msg, prot_name, prot_seq
+        # fallback: original ubiquitin demo
         demo = generate_demo_spectrum()
         spectra_data = [demo.to_dict()]
         opts = [{'label': f"{demo.scan_id}  RT={demo.retention_time:.2f} min  "
@@ -84,14 +115,20 @@ def register_callbacks(app):
 
         return data, opts, scan_val, f'Loaded: {msg}', feats_data, feats_status, prot_name, prot_seq
 
-    # ── Demo — also loads features ─────────────────────────────────────────
+    # ── Load dataset — also fills features ──────────────────────────────────
     @app.callback(
         Output('store-features', 'data'),
         Output('upload-features-status', 'children'),
         Input('load-demo-btn', 'n_clicks'),
+        State('demo-file-select', 'value'),
         prevent_initial_call=True,
     )
-    def load_demo_features(_):
+    def load_demo_features(_, selected_file):
+        if selected_file:
+            _, feats, _ = _load_demo_file(selected_file)
+            if feats:
+                return [f.to_dict() for f in feats], f'{len(feats)} features loaded from {selected_file}'
+            return [], f'No features in {selected_file}'
         feats = generate_demo_features()
         return [f.to_dict() for f in feats], f'{len(feats)} features loaded (demo)'
 
