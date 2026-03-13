@@ -4,7 +4,7 @@ Search callbacks:
                         results-table, search-result-summary, top-hit-summary
   - Results table row click → store-selected-result, ion-table
 """
-from dash import Input, Output, State, callback_context, no_update, html
+from dash import Input, Output, State, no_update, html
 import dash
 
 from src.data.models import Spectrum, SearchResult, FragmentIon
@@ -15,7 +15,7 @@ from src.data.amino_acids import AA_MASSES
 def register_callbacks(app):
 
     # ── Run targeted search ────────────────────────────────────────────────
-    @app.callback(
+    @app.long_callback(
         Output('store-search-results',  'data'),
         Output('store-matched-ions',    'data'),
         Output('results-table',         'data'),
@@ -32,20 +32,38 @@ def register_callbacks(app):
         State('variable-mods',           'value'),
         State('search-truncations',      'value'),
         State('search-mods',             'value'),
+        progress=[
+            Output('search-progress-bar', 'value'),
+            Output('search-progress-bar', 'label'),
+            Output('search-progress-bar', 'style'),
+        ],
+        running=[
+            (Output('run-search-btn', 'disabled'), True, False),
+        ],
         prevent_initial_call=True,
     )
-    def run_search(n_clicks, spectra_data, scan_idx, prot_data,
+    def run_search(set_progress, n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods):
+        _bar_hidden  = {'height': '10px', 'display': 'none'}
+        _bar_visible = {'height': '10px', 'display': 'block'}
+
+        def _prog(pct, label=''):
+            set_progress((pct, label, _bar_visible))
+
         if not spectra_data:
+            set_progress((0, '', _bar_hidden))
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
         if not prot_data or not prot_data.get('sequence'):
+            set_progress((0, '', _bar_hidden))
             return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
 
+        _prog(5, '5%')
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
         seq      = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
         name     = prot_data.get('name', 'Protein')
 
+        _prog(15, '15%')
         results = run_targeted_search(
             spectrum        = spectrum,
             protein_sequence= seq,
@@ -56,9 +74,12 @@ def register_callbacks(app):
             search_truncations   = bool(do_trunc),
             search_modifications = bool(do_mods),
             variable_mods   = vmods or [],
+            progress_cb     = _prog,
         )
+        _prog(90, '90%')
 
         if not results:
+            set_progress((0, '', _bar_hidden))
             return ([], [], [], 'No results found.', 'No matches.', 'No results.')
 
         # Store results
@@ -110,6 +131,7 @@ def register_callbacks(app):
             ) if pf0.modifications else html.Div(),
         ])
 
+        set_progress((100, '100%', _bar_hidden))
         return results_store, ions_data, table_rows, summary, f"✓ {n} hits", top_text
 
     # ── Select row in results table → update selected proteoform ──────────

@@ -103,7 +103,8 @@ def run_targeted_search(spectrum: Spectrum,
                          search_truncations: bool = True,
                          search_modifications: bool = True,
                          variable_mods: Optional[List[str]] = None,
-                         max_mods: int = 1) -> List[SearchResult]:
+                         max_mods: int = 1,
+                         progress_cb=None) -> List[SearchResult]:
     """
     One-spectrum-one-protein targeted search.
 
@@ -137,8 +138,12 @@ def run_targeted_search(spectrum: Spectrum,
 
     # --- Score each candidate ---
     results: List[SearchResult] = []
+    n_cands = len(full_cands)
 
-    for seq, start, end, mods in full_cands:
+    for cand_idx, (seq, start, end, mods) in enumerate(full_cands):
+        if progress_cb and n_cands > 0:
+            pct = int(15 + (cand_idx / n_cands) * 70)   # 15 → 85 %
+            progress_cb(pct, f'{pct}%')
         if len(seq) < 3:
             continue
         mod_map: Dict[int, float] = {m.position: m.mass_shift for m in mods}
@@ -149,16 +154,20 @@ def run_targeted_search(spectrum: Spectrum,
             continue
 
         matched = match_peaks(ions, spectrum, tolerance_ppm)
-        n_matched = sum(1 for i in matched if i.matched)
         n_total   = len(matched)
+        n_matched = n_b = n_y = n_c = n_z = 0
+        for _ion in matched:
+            if _ion.matched:
+                n_matched += 1
+                t = _ion.ion_type
+                if t == 'b':   n_b += 1
+                elif t == 'y': n_y += 1
+                elif t == 'c': n_c += 1
+                elif t == 'z': n_z += 1
         if n_total == 0 or n_matched == 0:
             continue
 
         frac = n_matched / n_total
-        n_b  = sum(1 for i in matched if i.matched and i.ion_type == 'b')
-        n_y  = sum(1 for i in matched if i.matched and i.ion_type == 'y')
-        n_c  = sum(1 for i in matched if i.matched and i.ion_type == 'c')
-        n_z  = sum(1 for i in matched if i.matched and i.ion_type == 'z')
 
         score = _score(n_matched, n_b, n_y, n_c, n_z, frac, obs_mass, th_mass)
         cov   = sequence_coverage_pct(seq, matched)
