@@ -34,27 +34,26 @@ def register_callbacks(app):
         State('search-mods',             'value'),
         progress=[
             Output('search-progress-bar', 'value'),
-            Output('search-progress-bar', 'label'),
-            Output('search-progress-bar', 'style'),
+            Output('search-status',       'children'),
         ],
         running=[
-            (Output('run-search-btn', 'disabled'), True, False),
+            (Output('run-search-btn',      'disabled'), True,  False),
+            (Output('search-progress-bar', 'value'),    0,     0),
+            (Output('search-progress-bar', 'style'),
+             {'height': '10px', 'display': 'block', 'marginBottom': '4px'},
+             {'height': '10px', 'display': 'none'}),
         ],
         prevent_initial_call=True,
     )
     def run_search(set_progress, n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods):
-        _bar_hidden  = {'height': '10px', 'display': 'none'}
-        _bar_visible = {'height': '10px', 'display': 'block'}
 
         def _prog(pct, label=''):
-            set_progress((pct, label, _bar_visible))
+            set_progress((pct, f'Searching… {pct}%'))
 
         if not spectra_data:
-            set_progress((0, '', _bar_hidden))
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
         if not prot_data or not prot_data.get('sequence'):
-            set_progress((0, '', _bar_hidden))
             return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
 
         _prog(5, '5%')
@@ -79,7 +78,6 @@ def register_callbacks(app):
         _prog(90, '90%')
 
         if not results:
-            set_progress((0, '', _bar_hidden))
             return ([], [], [], 'No results found.', 'No matches.', 'No results.')
 
         # Store results
@@ -131,8 +129,7 @@ def register_callbacks(app):
             ) if pf0.modifications else html.Div(),
         ])
 
-        set_progress((100, '100%', _bar_hidden))
-        return results_store, ions_data, table_rows, summary, f"✓ {n} hits", top_text
+        return results_store, ions_data, table_rows, summary, f'✓ {n} hits', top_text
 
     # ── Select row in results table → update selected proteoform ──────────
     @app.callback(
