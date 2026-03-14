@@ -8,7 +8,7 @@ from dash import Input, Output, State, no_update, html
 import dash
 
 from src.data.models import Spectrum, SearchResult, FragmentIon
-from src.analysis.proteoform_search import run_targeted_search
+from src.analysis.proteoform_search import run_targeted_search, run_database_search
 from src.data.amino_acids import AA_MASSES
 
 
@@ -32,31 +32,52 @@ def register_callbacks(app):
         State('variable-mods',           'value'),
         State('search-truncations',      'value'),
         State('search-mods',             'value'),
+        State('search-mode',             'value'),
+        State('store-fasta-proteins',    'data'),
         prevent_initial_call=True,
     )
     def run_search(n_clicks, spectra_data, scan_idx, prot_data,
-                   tol, max_z, ion_types, vmods, do_trunc, do_mods):
+                   tol, max_z, ion_types, vmods, do_trunc, do_mods,
+                   search_mode, fasta_proteins):
         if not spectra_data:
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
-        if not prot_data or not prot_data.get('sequence'):
-            return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
 
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
-        seq      = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
-        name     = prot_data.get('name', 'Protein')
 
-        results = run_targeted_search(
-            spectrum        = spectrum,
-            protein_sequence= seq,
-            protein_name    = name,
-            ion_types       = ion_types or ['b', 'y', 'c', 'z'],
-            max_charge      = int(max_z or 4),
-            tolerance_ppm   = float(tol or 10),
-            search_truncations   = bool(do_trunc),
-            search_modifications = bool(do_mods),
-            variable_mods   = vmods or [],
-        )
+        # ── Database search mode ────────────────────────────────────────────
+        if search_mode == 'database':
+            if not fasta_proteins:
+                return (no_update,) * 5 + ('⚠ Upload a FASTA file first.',)
+            proteins = [(p[0], p[1]) for p in fasta_proteins]
+            results = run_database_search(
+                spectrum       = spectrum,
+                proteins       = proteins,
+                ion_types      = ion_types or ['b', 'y', 'c', 'z'],
+                max_charge     = int(max_z or 4),
+                tolerance_ppm  = float(tol or 10),
+                search_truncations = bool(do_trunc),
+                top_n          = 25,
+            )
+            search_label = f'{len(proteins)} proteins (database)'
+        else:
+            # ── Targeted search mode ────────────────────────────────────────
+            if not prot_data or not prot_data.get('sequence'):
+                return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
+            seq  = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
+            name = prot_data.get('name', 'Protein')
+            results = run_targeted_search(
+                spectrum        = spectrum,
+                protein_sequence= seq,
+                protein_name    = name,
+                ion_types       = ion_types or ['b', 'y', 'c', 'z'],
+                max_charge      = int(max_z or 4),
+                tolerance_ppm   = float(tol or 10),
+                search_truncations   = bool(do_trunc),
+                search_modifications = bool(do_mods),
+                variable_mods   = vmods or [],
+            )
+            search_label = name
 
         if not results:
             return ([], [], [], 'No results found.', 'No matches.', 'No results.')
@@ -81,8 +102,11 @@ def register_callbacks(app):
                 ev_str = f'{ev:.2e}'
             else:
                 ev_str = f'{ev:.4f}'
+            # Trim [DECOY] suffix from protein name display
+            prot_display = pf.protein_name.replace(' [DECOY]', '')
             table_rows.append({
                 'rank':     rank,
+                'protein':  prot_display[:25] + ('…' if len(prot_display) > 25 else ''),
                 'sequence': pf.sequence[:30] + ('…' if len(pf.sequence) > 30 else ''),
                 'range':    f"{pf.start_pos}–{pf.end_pos}",
                 'score':    f"{pf.score:.2f}",
@@ -98,7 +122,7 @@ def register_callbacks(app):
 
         # Summary
         n = len(results)
-        summary = (f"{n} candidate(s) found for {name} | "
+        summary = (f"{n} candidate(s) found for {search_label} | "
                    f"Scan {spectrum.scan_id} | "
                    f"Tolerance {tol} ppm")
 

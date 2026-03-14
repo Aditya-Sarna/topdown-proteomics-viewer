@@ -307,6 +307,55 @@ def parse_pcml(file_bytes: bytes, filename: str) -> Tuple[List[Spectrum], List[F
 
 
 # ---------------------------------------------------------------------------
+# FASTA parser
+# ---------------------------------------------------------------------------
+
+def parse_fasta(content: str) -> List[tuple]:
+    """Parse a FASTA-format string.
+
+    Returns a list of (name, sequence) tuples where *name* is the first
+    whitespace-delimited token of the header line and *sequence* is the
+    concatenated, upper-cased residue string.
+
+    Parameters
+    ----------
+    content : str
+        Raw text of a FASTA file (decoded from bytes or upload).
+
+    Returns
+    -------
+    List of (name, sequence) tuples — empty list on parse failure.
+    """
+    proteins: List[tuple] = []
+    current_name: Optional[str] = None
+    current_parts: List[str] = []
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith('>'):
+            if current_name is not None:
+                seq = ''.join(current_parts)
+                if seq:
+                    proteins.append((current_name, seq.upper()))
+            header = line[1:].strip()
+            # use only the first whitespace-delimited word (accession / id)
+            current_name = header.split()[0][:80] if header else 'unknown'
+            current_parts = []
+        else:
+            # Strip anything that is not a letter (sequence annotation numbers, etc.)
+            current_parts.append(''.join(c for c in line if c.isalpha()))
+
+    if current_name is not None:
+        seq = ''.join(current_parts)
+        if seq:
+            proteins.append((current_name, seq.upper()))
+
+    return proteins
+
+
+# ---------------------------------------------------------------------------
 # Dash upload helper
 # ---------------------------------------------------------------------------
 

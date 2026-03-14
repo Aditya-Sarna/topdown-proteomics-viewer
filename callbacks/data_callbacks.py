@@ -13,7 +13,7 @@ from dash import Input, Output, State, no_update
 
 from src.data.parsers import (decode_upload, generate_demo_spectrum,
                                generate_demo_features, UBIQUITIN, UBIQUITIN_MASS,
-                               parse_pcml, parse_mzml)
+                               parse_pcml, parse_mzml, parse_fasta)
 
 _DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
 
@@ -213,6 +213,43 @@ def register_callbacks(app):
             ]
             sugg_el = html_list(items)
         return diff_text, sugg_el
+
+    # ── FASTA upload → store-fasta-proteins ────────────────────────────────
+    @app.callback(
+        Output('store-fasta-proteins', 'data'),
+        Output('upload-fasta-status',  'children'),
+        Input('upload-fasta', 'contents'),
+        State('upload-fasta', 'filename'),
+        prevent_initial_call=True,
+    )
+    def load_fasta_db(contents, filename):
+        if not contents:
+            return no_update, no_update
+        import base64 as _b64
+        try:
+            _ctype, content_str = contents.split(',', 1)
+            decoded = _b64.b64decode(content_str).decode('utf-8', errors='replace')
+        except Exception as e:
+            return [], f'Error decoding {filename}: {e}'
+        proteins = parse_fasta(decoded)
+        if not proteins:
+            return [], f'No protein entries found in {filename}'
+        # Hard-cap at 500 proteins for browser performance
+        capped = proteins[:500]
+        cap_note = f' (capped at 500)' if len(proteins) > 500 else ''
+        data = [[name, seq] for name, seq in capped]
+        return data, f'{len(capped)} protein(s) loaded{cap_note} from {filename}'
+
+    # ── Mode toggle → show/hide targeted vs database controls ─────────────
+    @app.callback(
+        Output('targeted-protein-controls', 'style'),
+        Output('database-protein-controls', 'style'),
+        Input('search-mode', 'value'),
+    )
+    def toggle_search_mode(mode):
+        if mode == 'database':
+            return {'display': 'none'}, {}
+        return {}, {'display': 'none'}
 
 
 def html_list(items):

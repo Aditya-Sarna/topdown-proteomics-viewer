@@ -160,23 +160,68 @@ def _sidebar():
 
         # ── Protein ────────────────────────────────────────────────────────
         _section("Protein",
-            _label("Protein Name"),
-            dbc.Input(id='protein-name', placeholder='e.g. Ubiquitin',
-                      size='sm', className='mb-1',
-                      style={'background': '#ffffff', 'color': '#111111',
-                             'border': '1px solid #cccccc'}),
-            _label("Sequence (single-letter)"),
-            dbc.Textarea(
-                id='protein-sequence',
-                placeholder='MQIFVKTLTGK…',
-                rows=4,
-                style={'background': '#ffffff', 'color': '#111111',
-                       'fontSize': '0.78rem', 'fontFamily': 'Courier New',
-                       'border': '1px solid #cccccc', 'resize': 'vertical'},
+            _label("Search Mode"),
+            dbc.RadioItems(
+                id='search-mode',
+                options=[
+                    {'label': 'Targeted (single protein)', 'value': 'targeted'},
+                    {'label': 'Database (FASTA)',           'value': 'database'},
+                ],
+                value='targeted',
+                inline=False,
+                className='small mb-2',
+                inputStyle={'marginRight': '4px'},
             ),
-            html.Div(id='protein-mass-display',
-                     className='mt-1',
-                     style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+            # Targeted controls (default visible)
+            html.Div(id='targeted-protein-controls', children=[
+                _label("Protein Name"),
+                dbc.Input(id='protein-name', placeholder='e.g. Ubiquitin',
+                          size='sm', className='mb-1',
+                          style={'background': '#ffffff', 'color': '#111111',
+                                 'border': '1px solid #cccccc'}),
+                _label("Sequence (single-letter)"),
+                dbc.Textarea(
+                    id='protein-sequence',
+                    placeholder='MQIFVKTLTGK…',
+                    rows=4,
+                    style={'background': '#ffffff', 'color': '#111111',
+                           'fontSize': '0.78rem', 'fontFamily': 'Courier New',
+                           'border': '1px solid #cccccc', 'resize': 'vertical'},
+                ),
+                html.Div(id='protein-mass-display',
+                         className='mt-1',
+                         style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+            ]),
+            # Database controls (hidden until mode == 'database')
+            html.Div(id='database-protein-controls', style={'display': 'none'}, children=[
+                _label("Upload FASTA (.fasta / .fa / .txt)"),
+                dcc.Upload(
+                    id='upload-fasta',
+                    children=html.Div([
+                        'Drag & drop or ', html.A('browse', style={'color': ACCENT}),
+                        html.Span(' (.fasta, .fa)', style={'color': TEXT_MUTED, 'fontSize': '0.70rem'})
+                    ]),
+                    style={
+                        'borderWidth': '1px', 'borderStyle': 'dashed',
+                        'borderRadius': '4px', 'borderColor': '#cccccc',
+                        'textAlign': 'center', 'padding': '8px 4px',
+                        'color': TEXT_MUTED, 'fontSize': '0.78rem',
+                        'cursor': 'pointer', 'background': '#fafafa',
+                    },
+                    multiple=False,
+                ),
+                dcc.Loading(
+                    id='upload-fasta-loading',
+                    type='circle',
+                    color='#2196F3',
+                    children=html.Div(id='upload-fasta-status',
+                                      className='mt-1',
+                                      style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+                ),
+                html.Div(id='fasta-protein-count',
+                         className='mt-1',
+                         style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+            ]),
         ),
 
         # ── Search Parameters ──────────────────────────────────────────────
@@ -389,6 +434,7 @@ def _tab_features():
 def _tab_search():
     columns = [
         {'name': 'Rank',        'id': 'rank'},
+        {'name': 'Protein',     'id': 'protein'},
         {'name': 'Sequence',    'id': 'sequence'},
         {'name': 'Range',       'id': 'range'},
         {'name': 'Score',       'id': 'score'},
@@ -530,6 +576,7 @@ def _stores():
         dcc.Store(id='store-selected-scan-idx',  storage_type='memory', data=0),
         dcc.Store(id='store-features',           storage_type='memory', data=[]),
         dcc.Store(id='store-protein',            storage_type='memory', data={}),
+        dcc.Store(id='store-fasta-proteins',     storage_type='memory', data=[]),
         dcc.Store(id='store-search-results',     storage_type='memory', data=[]),
         dcc.Store(id='store-matched-ions',       storage_type='memory', data=[]),
         dcc.Store(id='store-selected-result',    storage_type='memory', data={}),

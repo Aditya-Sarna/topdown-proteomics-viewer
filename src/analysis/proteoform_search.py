@@ -15,7 +15,8 @@ import numpy as np
 from scipy.stats import binom as _binom
 
 from ..data.models import Spectrum, Proteoform, Modification, SearchResult, FragmentIon
-from ..data.amino_acids import PTM_DATABASE, PTM_TARGET_RESIDUES
+from ..data.amino_acids import PTM_DATABASE, PTM_TARGET_RESIDUES, AA_MASSES as _AA_MASSES
+_VALID_AA = frozenset(_AA_MASSES)
 from .fragment_ions import calc_ions
 from .peak_matching import match_peaks, sequence_coverage_pct
 from .mass_utils import calc_sequence_mass, mz_to_mass, ppm_error
@@ -323,4 +324,93 @@ def run_targeted_search(spectrum: Spectrum,
     _assign_qvalues(target_results, decoy_results)
 
     return target_results[:20]
+
+
+# ---------------------------------------------------------------------------
+# Database search  (multi-protein FASTA mode)
+# ---------------------------------------------------------------------------
+
+_DB_SEARCH_MAX_PROTEINS  = 500   # hard cap per run
+_DB_SEARCH_MAX_CANDS_PER = 30    # candidates per protein (speed vs recall)
+
+
+def run_database_search(
+        spectrum: Spectrum,
+        proteins: List[tuple],          # [(name, sequence), ...]
+        ion_types: Optional[List[str]] = None,
+        max_charge: int = 4,
+        tolerance_ppm: float = 10.0,
+        search_truncations: bool = True,
+        top_n: int = 25) -> List[SearchResult]:
+    """
+    Search a spectrum against every protein in a FASTA-derived list.
+
+    Strategy
+    --------
+    For each protein: generate full-length + truncation candidates (no
+    variable mods — speed), plus the equivalent reversed-sequence decoys.
+    E-values and q-values are computed globally across *all* proteins so
+    that the FDR estimate reflects the full competition.
+
+    Returns
+    -------
+    At most *top_n* target SearchResult objects, ranked by score, each
+    annotated with cross-database e_value and q_value.
+    """
+    if ion_types is None:
+        ion_types = ['b', 'y', 'c', 'z']
+
+    obs_mass = 0.0
+    if spectrum.precursor_mass > 0:
+        obs_mass = spectrum.precursor_mass
+    elif spectrum.precursor_mz > 0 and spectrum.precursor_charge > 0:
+        obs_mass = mz_to_mass(spectrum.precursor_mz, spectrum.precursor_charge)
+
+    all_target: List[SearchResult] = []
+    all_decoy:  List[SearchResult] = []
+    total_cands = 0
+
+    for prot_name, prot_seq in proteins[:_DB_SEARCH_MAX_PROTEINS]:
+        seq = ''.join(c for c in prot_seq.upper() if c in _VALID_AA)
+        if len(seq) < 5:
+            continue
+
+        base = [(seq, 1, len(seq))]
+        if search_truncations:
+            base += _truncation_candidates(seq, max_trunc=4)
+        target_cands = [(s, st, en, []) for s, st, en in base[:_DB_SEARCH_MAX_CANDS_PER]]
+
+        decoy_seq = seq[::-1]
+        decoy_base = [(decoy_seq, 1, len(decoy_seq))]
+        if search_truncations:
+            decoy_base += _truncation_candidates(decoy_seq, max_trunc=4)
+        decoy_cands = [(s, st, en, []) for s, st, en in decoy_base[:_DB_SEARCH_MAX_CANDS_PER]]
+
+        total_cands += len(target_cands) + len(decoy_cands)
+
+        all_target.extend(_score_candidates(
+            target_cands, spectrum, ion_types, max_charge, tolerance_ppm,
+            obs_mass, prot_name, is_decoy=False))
+        all_decoy.extend(_score_candidates(
+            decoy_cands, spectrum, ion_types, max_charge, tolerance_ppm,
+            obs_mass, prot_name, is_decoy=True))
+
+    if not all_target:
+        return []
+
+    # E-values: use total candidate count so the null model reflects full DB size
+    for r in all_target + all_decoy:
+        r.e_value = round(_calc_evalue(
+            r.proteoform.matched_ions,
+            r.proteoform.total_ions,
+            spectrum, tolerance_ppm,
+            max(total_cands, 1),
+        ), 6)
+
+    # Global target-decoy q-values
+    all_target.sort(key=lambda r: r.proteoform.score, reverse=True)
+    all_decoy.sort( key=lambda r: r.proteoform.score, reverse=True)
+    _assign_qvalues(all_target, all_decoy)
+
+    return all_target[:top_n]
 
