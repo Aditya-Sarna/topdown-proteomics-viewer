@@ -88,7 +88,7 @@ def _score(n_matched: int, n_b: int, n_y: int, n_c: int, n_z: int,
     """Hyperscore-inspired scoring function."""
     ion_score = (math.log(n_b + 1) + math.log(n_y + 1) +
                  math.log(n_c + 1) + math.log(n_z + 1))
-    mass_penalty = 1.0 / (1.0 + abs(ppm_error(obs_mass, th_mass)) / 5.0) if th_mass else 1.0
+    mass_penalty = 1.0 / (1.0 + abs(ppm_error(obs_mass, th_mass)) / 5.0) if (th_mass and obs_mass) else 1.0
     return round(ion_score * frac * 100.0 * mass_penalty, 3)
 
 
@@ -258,7 +258,8 @@ def run_targeted_search(spectrum: Spectrum,
                         search_truncations: bool = True,
                         search_modifications: bool = True,
                         variable_mods: Optional[List[str]] = None,
-                        max_mods: int = 1) -> List[SearchResult]:
+                        max_mods: int = 1,
+                        obs_mass_override: float = 0.0) -> List[SearchResult]:
     """
     One-spectrum-one-protein targeted search with statistical scoring.
 

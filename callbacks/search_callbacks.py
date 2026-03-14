@@ -36,11 +36,12 @@ def register_callbacks(app):
         State('search-mode',             'value'),
         State('store-fasta-proteins',    'data'),
         State('deconvolute-spectrum',    'value'),
+        State('manual-mass',             'value'),
         prevent_initial_call=True,
     )
     def run_search(n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods,
-                   search_mode, fasta_proteins, do_deconv):
+                   search_mode, fasta_proteins, do_deconv, manual_mass):
         if not spectra_data:
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
 
@@ -91,6 +92,7 @@ def register_callbacks(app):
                 search_truncations   = bool(do_trunc),
                 search_modifications = bool(do_mods),
                 variable_mods   = vmods or [],
+                obs_mass_override= float(manual_mass) if manual_mass else 0.0,
             )
             search_label = name
 
