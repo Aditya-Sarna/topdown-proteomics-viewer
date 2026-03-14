@@ -20,6 +20,7 @@ def register_callbacks(app):
         Output('store-search-results',  'data'),
         Output('store-matched-ions',    'data'),
         Output('results-table',         'data'),
+        Output('ion-table',             'data', allow_duplicate=True),
         Output('search-result-summary', 'children'),
         Output('search-status',         'children'),
         Output('top-hit-summary',       'children'),
@@ -43,7 +44,7 @@ def register_callbacks(app):
                    tol, max_z, ion_types, vmods, do_trunc, do_mods,
                    search_mode, fasta_proteins, do_deconv, manual_mass):
         if not spectra_data:
-            return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
+            return (no_update,) * 6 + ('⚠ Load a spectrum first.',)
 
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
@@ -64,7 +65,7 @@ def register_callbacks(app):
         # ── Database search mode ────────────────────────────────────────────
         if search_mode == 'database':
             if not fasta_proteins:
-                return (no_update,) * 5 + ('⚠ Upload a FASTA file first.',)
+                return (no_update,) * 6 + ('⚠ Upload a FASTA file first.',)
             proteins = [(p[0], p[1]) for p in fasta_proteins]
             results = run_database_search(
                 spectrum       = spectrum,
@@ -79,7 +80,7 @@ def register_callbacks(app):
         else:
             # ── Targeted search mode ────────────────────────────────────────
             if not prot_data or not prot_data.get('sequence'):
-                return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
+                return (no_update,) * 6 + ('⚠ Enter a protein sequence.',)
             seq  = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
             name = prot_data.get('name', 'Protein')
             results = run_targeted_search(
@@ -97,7 +98,7 @@ def register_callbacks(app):
             search_label = name
 
         if not results:
-            return ([], [], [], 'No results found.', 'No matches.', 'No results.')
+            return [], [], [], [], 'No results found.', 'No matches.', 'No results.'
 
         # Store results
         results_store = [r.to_dict() for r in results]
@@ -169,7 +170,20 @@ def register_callbacks(app):
             ) if pf0.modifications else html.Div(),
         ])
 
-        return results_store, ions_data, table_rows, summary, f'✓ {n} hits', top_text
+        # Ion rows for the top hit (auto-populated without requiring a row click)
+        top_ion_rows = []
+        for ion in sorted(top.fragment_ions, key=lambda x: (x.ion_type, x.position)):
+            top_ion_rows.append({
+                'ion':     ion.label(),
+                'th_mz':  f"{ion.mz:.4f}",
+                'obs_mz': f"{ion.observed_mz:.4f}" if ion.matched else '—',
+                'ppm':    f"{ion.mass_error_ppm:+.2f}" if ion.matched else '—',
+                'charge': str(ion.charge),
+                'matched': '✓' if ion.matched else '✗',
+                'seq':     ion.sequence[:15] if ion.sequence else '',
+            })
+
+        return results_store, ions_data, table_rows, top_ion_rows, summary, f'✓ {n} hits', top_text
 
     # ── Select row in results table → update selected proteoform ──────────
     @app.callback(
