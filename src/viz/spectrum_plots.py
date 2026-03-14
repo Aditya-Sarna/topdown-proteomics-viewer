@@ -144,22 +144,23 @@ def create_spectrum_plot(spectrum: Spectrum,
                  f"z={spectrum.precursor_charge}  "
                  f"Mass={spectrum.precursor_mass:.2f} Da") if spectrum.precursor_mz else ""
     n_matched_total = sum(1 for ion in (matched_ions or []) if ion.matched)
-    title = (f"<b>{spectrum.scan_id}</b>  |  RT {spectrum.retention_time:.2f} min  "
-             f"|  {prec_info}  |  Matched: {n_matched_total}")
+    title_line1 = f"<b>{spectrum.scan_id}</b>  |  RT {spectrum.retention_time:.2f} min  |  Matched: {n_matched_total}"
+    title_line2 = prec_info
+    title = title_line1 + (f"<br><sup>{title_line2}</sup>" if title_line2 else "")
 
     fig.update_layout(
         template='plotly_white',
-        title=dict(text=title, font=dict(size=12)),
-        xaxis=dict(title='m/z', showgrid=True, gridcolor='rgba(0,0,0,0.08)'),
+        title=dict(text=title, font=dict(size=12), pad=dict(b=6)),
+        xaxis=dict(title='m/z', showgrid=True, gridcolor='rgba(0,0,0,0.08)', automargin=True),
         yaxis_color='#111111', xaxis_color='#111111',
         yaxis=dict(title='Rel. Intensity (%)', showgrid=True,
-                   gridcolor='rgba(0,0,0,0.08)', range=[-3, 115]),
+                   gridcolor='rgba(0,0,0,0.08)', range=[-3, 115], automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
         hovermode='closest',
-        legend=dict(orientation='h', yanchor='bottom', y=1.01, x=0,
-                    font=dict(size=11)),
-        margin=dict(l=50, r=20, t=80, b=50),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=60, r=20, t=95, b=50),
     )
     return fig
 
@@ -206,18 +207,18 @@ def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
     fig.update_layout(
         template='plotly_white',
         title=dict(
-            text=(f'Deconvolved Spectrum — {dr.n_original_peaks}→'
-                  f'{dr.n_deconvoluted_peaks} peaks ({note})'),
+            text=(f'Deconvolved Spectrum<br><sup>{dr.n_original_peaks}→'
+                  f'{dr.n_deconvoluted_peaks} peaks ({note})</sup>'),
             font=dict(size=12),
         ),
         xaxis=dict(title='Monoisotopic Mass (Da, z=1 equiv)', showgrid=True,
-                   gridcolor='rgba(0,0,0,0.08)'),
+                   gridcolor='rgba(0,0,0,0.08)', automargin=True),
         yaxis=dict(title='Rel. Intensity (%)', showgrid=True,
-                   gridcolor='rgba(0,0,0,0.08)', range=[-3, 115]),
+                   gridcolor='rgba(0,0,0,0.08)', range=[-3, 115], automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
         showlegend=False,
-        margin=dict(l=50, r=20, t=60, b=50),
-        height=360,
+        margin=dict(l=60, r=20, t=75, b=50),
+        height=380,
     )
     return fig

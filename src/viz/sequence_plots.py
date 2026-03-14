@@ -199,18 +199,18 @@ def create_sequence_plot(proteoform: Proteoform,
     n_covered = sum(1 for v in coverage_map(seq, matched_ions or []).values() if v)
     cov_pct   = n_covered / n_aa * 100 if n_aa else 0
     n_mods    = len(proteoform.modifications)
-    title = (f"<b>{proteoform.protein_name or 'Protein'}</b>  "
-             f"{proteoform.start_pos}–{proteoform.end_pos}  |  "
-             f"{n_aa} aa  |  Coverage: {cov_pct:.1f}%  |  "
-             f"PTMs: {n_mods}")
+    title_line1 = (f"<b>{proteoform.protein_name or 'Protein'}</b>  "
+                   f"{proteoform.start_pos}–{proteoform.end_pos}  |  {n_aa} aa")
+    title_line2 = f"Coverage: {cov_pct:.1f}%  |  PTMs: {n_mods}"
     if proteoform.mass_error_ppm != 0:
-        title += f"  |  Δmass: {proteoform.mass_error_ppm:.1f} ppm"
+        title_line2 += f"  |  Δmass: {proteoform.mass_error_ppm:.1f} ppm"
+    title = title_line1 + f"<br><sup>{title_line2}</sup>"
 
-    height = max(300, n_rows * 52 + 120)
+    height = max(300, n_rows * 52 + 140)
 
     fig.update_layout(
         template='plotly_white',
-        title=dict(text=title, font=dict(size=12)),
+        title=dict(text=title, font=dict(size=12), pad=dict(b=6)),
         xaxis=dict(showticklabels=False, showgrid=False, zeroline=False,
                    range=[-2, RESIDUES_PER_ROW + 0.5]),
         yaxis=dict(showticklabels=False, showgrid=False, zeroline=False,
@@ -218,9 +218,9 @@ def create_sequence_plot(proteoform: Proteoform,
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
         height=height,
-        legend=dict(orientation='h', yanchor='bottom', y=1.01, x=0,
-                    font=dict(size=11)),
-        margin=dict(l=50, r=20, t=80, b=20),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=50, r=20, t=100, b=20),
     )
     return fig
 
@@ -290,14 +290,14 @@ def create_internal_fragment_map(
             font=dict(size=12),
         ),
         xaxis=dict(title='N-terminal start position', range=[0, n + 1],
-                   showgrid=True, gridcolor='rgba(0,0,0,0.06)'),
+                   showgrid=True, gridcolor='rgba(0,0,0,0.06)', automargin=True),
         yaxis=dict(title='C-terminal end position',   range=[0, n + 1],
-                   showgrid=True, gridcolor='rgba(0,0,0,0.06)'),
+                   showgrid=True, gridcolor='rgba(0,0,0,0.06)', automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
-        legend=dict(orientation='h', yanchor='bottom', y=1.01, x=0,
-                    font=dict(size=11)),
-        margin=dict(l=60, r=20, t=70, b=50),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=65, r=20, t=75, b=55),
         height=420,
     )
     return fig

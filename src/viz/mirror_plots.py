@@ -194,13 +194,14 @@ def create_mirror_plot(spectrum: Spectrum,
 
     fig.update_layout(
         template='plotly_white',
-        title='<b>Mirror Plot</b> — Theoretical (top) vs Experimental (bottom)',
+        title=dict(text='<b>Mirror Plot</b> — Theoretical vs Experimental',
+                   font=dict(size=12), pad=dict(b=4)),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
-        height=580,
+        height=600,
         hovermode='x unified',
-        legend=dict(orientation='h', yanchor='bottom', y=1.01, x=0,
-                    font=dict(size=11)),
-        margin=dict(l=60, r=20, t=80, b=50),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=65, r=20, t=100, b=55),
     )
     return fig

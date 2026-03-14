@@ -116,18 +116,23 @@ def create_feature_map(features: List[Feature],
 
     fig.update_layout(
         template='plotly_white',
-        title='<b>Feature Map</b> — m/z vs Retention Time',
-        xaxis=dict(title='m/z', showgrid=True, gridcolor='rgba(0,0,0,0.08)'),
+        title=dict(text='<b>Feature Map</b> — m/z vs Retention Time',
+                   font=dict(size=12)),
+        xaxis=dict(title='m/z', showgrid=True, gridcolor='rgba(0,0,0,0.08)', automargin=True),
         yaxis=dict(title='Retention Time (min)', showgrid=True,
-                   gridcolor='rgba(0,0,0,0.08)'),
+                   gridcolor='rgba(0,0,0,0.08)', automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
         hovermode='closest',
-        legend=dict(title=dict(text='Charge' if color_by == 'charge' else 'Proteoform',
-                               font=dict(size=11)),
-                    font=dict(size=11)),
-        height=500,
-        margin=dict(l=60, r=20, t=70, b=50),
+        legend=dict(
+            title=dict(text='Charge' if color_by == 'charge' else 'Proteoform',
+                       font=dict(size=10)),
+            font=dict(size=10),
+            orientation='h', yanchor='bottom', y=1.02, x=0,
+            bgcolor='rgba(255,255,255,0.7)',
+        ),
+        height=520,
+        margin=dict(l=65, r=20, t=90, b=55),
     )
     return fig
 
@@ -180,14 +185,15 @@ def create_intensity_trace(features: List[Feature],
 
     fig.update_layout(
         template='plotly_white',
-        title='<b>Elution Trace</b> — Intensity vs Retention Time',
-        xaxis_title='Retention Time (min)',
-        yaxis_title='Intensity',
+        title=dict(text='<b>Elution Trace</b> — Intensity vs RT', font=dict(size=12)),
+        xaxis=dict(title='Retention Time (min)', automargin=True),
+        yaxis=dict(title='Intensity', automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
-        height=300,
-        legend=dict(orientation='h', font=dict(size=10)),
-        margin=dict(l=60, r=20, t=60, b=40),
+        height=320,
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
+                    font=dict(size=9), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=65, r=20, t=80, b=45),
     )
     return fig
 
@@ -371,18 +377,18 @@ def create_xic_plot(spectra: list, feature: Optional[Feature] = None,
 
     fig.update_layout(
         template='plotly_white',
-        title=(
-            f'<b>XIC</b> — {feature.feature_id} '
-            f'| m/z {mz_lo:.3f}–{mz_hi:.3f} '
-            f'| z={feature.charge}'
+        title=dict(
+            text=(f'<b>XIC</b> — {feature.feature_id}<br>'
+                  f'<sup>m/z {mz_lo:.3f}–{mz_hi:.3f}  |  z={feature.charge}</sup>'),
+            font=dict(size=12),
         ),
-        xaxis_title='Retention Time (min)',
-        yaxis_title='Summed Intensity',
+        xaxis=dict(title='Retention Time (min)', automargin=True),
+        yaxis=dict(title='Summed Intensity', automargin=True),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
-        height=280,
-        legend=dict(orientation='h', yanchor='bottom', y=1.01,
-                    font=dict(size=10)),
-        margin=dict(l=55, r=20, t=65, b=40),
+        height=300,
+        legend=dict(orientation='h', yanchor='bottom', y=1.02,
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
+        margin=dict(l=65, r=20, t=85, b=45),
     )
     return fig
