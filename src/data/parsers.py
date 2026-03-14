@@ -172,8 +172,8 @@ def parse_feature_table(text: str, filename: str = 'features') -> List[Feature]:
                 intensity=float(row.get('intensity', row.get('abundance', 1.0))),
                 charge=int(row.get('charge', row.get('charge_state', 1))),
                 monoisotopic_mass=float(row.get('mass', row.get('monoisotopic_mass', 0.0))),
-                sequence=str(row.get('sequence', '')),
-                proteoform_id=str(row.get('proteoform_id', row.get('proteoform', ''))),
+                sequence=str(row.get('sequence', '') or '').replace('nan', ''),
+                proteoform_id=str(row.get('proteoform_id', row.get('proteoform', '')) or '').replace('nan', ''),
             )
             features.append(f)
         return features

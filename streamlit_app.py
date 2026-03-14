@@ -10,7 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from src.data.parsers import (
-    parse_mzml, parse_csv_peaks, parse_feature_table, parse_pcml,
+    parse_mzml, parse_feature_table, parse_pcml,
 )
 from src.data.models import Spectrum, Feature, Proteoform, FragmentIon, SearchResult
 from src.analysis.mass_utils import calc_sequence_mass, suggest_modifications, ppm_error
@@ -89,39 +89,6 @@ def _load_demo_file(filename: str) -> tuple[list, list, dict, str]:
     return [], [], {}, f"Unsupported format: {filename}"
 
 
-def _load_spectrum_file(uploaded) -> tuple[list, list, dict, str]:
-    """Return (spectra, features, protein_info, message)."""
-    raw = uploaded.read()
-    fname = uploaded.name.lower()
-    if fname.endswith(".pcml"):
-        spectra, feats, pinfo = parse_pcml(raw, uploaded.name)
-        parts = []
-        if spectra:
-            parts.append(f"{len(spectra)} spectr{'a' if len(spectra) != 1 else 'um'}")
-        if feats:
-            parts.append(f"{len(feats)} feature{'s' if len(feats) != 1 else ''}")
-        if pinfo.get('sequence'):
-            parts.append(f"protein '{pinfo.get('name', 'unknown')}'")
-        msg = (f"Loaded {', '.join(parts)} from {uploaded.name}"
-               if parts else f"No data found in {uploaded.name}")
-        return spectra, feats, pinfo, msg
-    if fname.endswith(".mzml"):
-        spectra = parse_mzml(raw, uploaded.name)
-        return spectra, [], {}, f"Loaded {len(spectra)} MS2 scan(s) from {uploaded.name}"
-    elif fname.endswith((".csv", ".tsv", ".txt")):
-        text = raw.decode("utf-8", errors="replace")
-        spec = parse_csv_peaks(text, uploaded.name)
-        if spec:
-            return [spec], [], {}, f"Loaded spectrum from {uploaded.name}"
-        return [], [], {}, f"Could not parse peak list from {uploaded.name}"
-    return [], [], {}, f"Unsupported format: {uploaded.name}"
-
-
-def _load_features_file(uploaded) -> tuple[list, str]:
-    text = uploaded.read().decode("utf-8", errors="replace")
-    feats = parse_feature_table(text, uploaded.name)
-    return feats, f"Loaded {len(feats)} feature(s) from {uploaded.name}"
-
 
 with st.sidebar:
     st.markdown("## Top-Down Proteomics Viewer")
@@ -191,25 +158,6 @@ with st.sidebar:
         else:
             st.error(_dm[1])
 
-
-    # File upload disabled — use the demo datasets above
-    # uploaded_spec = st.file_uploader(
-    #     "Upload Spectrum (.mzML / .pcml / peak CSV)",
-    #     type=["pcml", "mzml", "csv", "tsv", "txt"],
-    #     key="upload_spectrum",
-    # )
-    # if uploaded_spec:
-    #     spectra, feats, pinfo, msg = _load_spectrum_file(uploaded_spec)
-    #     ...
-
-    # uploaded_feats = st.file_uploader(
-    #     "Upload Feature Table (.csv)",
-    #     type=["csv", "tsv", "txt"],
-    #     key="upload_features",
-    # )
-    # if uploaded_feats:
-    #     feats, msg = _load_features_file(uploaded_feats)
-    #     ...
 
     st.divider()
 
