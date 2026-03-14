@@ -22,12 +22,12 @@ DARK_BG  = '#ffffff'
 PLOT_BG  = '#ffffff'
 
 # Gradient colour palettes: index = coverage depth [0=none, 1=low, 2=mid, 3=high]
-_N_FILL   = ['#F0F0F0', '#E3F2FD', '#90CAF9', '#1565C0']   # N-terminal (b/c/a)
-_N_BORD   = ['#cccccc', '#90CAF9', '#1976D2', '#0D47A1']
-_C_FILL   = ['#F0F0F0', '#FCE4EC', '#EF9A9A', '#880E4F']   # C-terminal (y/z)
-_C_BORD   = ['#cccccc', '#EF9A9A', '#C62828', '#B71C1C']
-_B_FILL   = ['#F0F0F0', '#F3E5F5', '#CE93D8', '#4A148C']   # Both
-_B_BORD   = ['#cccccc', '#CE93D8', '#8E24AA', '#311B92']
+_N_FILL   = ['#F0F0F0', '#E3F2FD', '#90CAF9', '#42A5F5']   # N-terminal (b/c/a)
+_N_BORD   = ['#cccccc', '#90CAF9', '#1976D2', '#1565C0']
+_C_FILL   = ['#F0F0F0', '#FCE4EC', '#EF9A9A', '#EF5350']   # C-terminal (y/z)
+_C_BORD   = ['#cccccc', '#EF9A9A', '#E53935', '#C62828']
+_B_FILL   = ['#F0F0F0', '#F3E5F5', '#CE93D8', '#AB47BC']   # Both
+_B_BORD   = ['#cccccc', '#CE93D8', '#8E24AA', '#7B1FA2']
 _PTM_GOLD = '#F9A825'
 
 # Legend uses the "mid" (index-2) shades

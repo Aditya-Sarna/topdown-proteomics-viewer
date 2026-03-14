@@ -332,7 +332,11 @@ def _tab_sequence():
                                             style={'fontSize': '0.82rem', 'color': '#333333'}),
                                    width='auto'),
                        ], className='mb-2 align-items-center'),
-                       dcc.Graph(id='sequence-graph',
+                       dcc.Loading(
+                           id='loading-sequence-graph',
+                           type='circle',
+                           color='#1a73e8',
+                           children=dcc.Graph(id='sequence-graph',
                                  config={
                                      'displayModeBar': True,
                                      'modeBarButtonsToRemove': [
@@ -347,6 +351,7 @@ def _tab_sequence():
                                      },
                                  },
                                  style={'minHeight': '300px'}),
+                       ),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
 
