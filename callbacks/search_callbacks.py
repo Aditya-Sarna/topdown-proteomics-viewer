@@ -58,11 +58,12 @@ def register_callbacks(app):
         State('store-fasta-proteins',    'data'),
         State('deconvolute-spectrum',    'value'),
         State('manual-mass',             'value'),
+        State('store-nterm-mod',         'data'),
         prevent_initial_call=True,
     )
     def run_search(n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods,
-                   search_mode, fasta_proteins, do_deconv, manual_mass):
+                   search_mode, fasta_proteins, do_deconv, manual_mass, nterm_mod):
         if not spectra_data:
             return (no_update,) * 6 + ('⚠ Load a spectrum first.',)
 
@@ -103,6 +104,16 @@ def register_callbacks(app):
                 return (no_update,) * 6 + ('⚠ Enter a protein sequence.',)
             seq  = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
             name = prot_data.get('name', 'Protein')
+            # Apply N-terminal modification mass shift if set
+            nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
+            nterm_name  = (nterm_mod or {}).get('name', '')
+            nterm_mods_list = []
+            if nterm_shift != 0.0:
+                from src.data.models import Modification
+                nterm_mods_list = [Modification(
+                    position=1, name=nterm_name,
+                    mass_shift=nterm_shift, residue=seq[0] if seq else ''
+                )]
             results = run_targeted_search(
                 spectrum        = spectrum,
                 protein_sequence= seq,
@@ -114,6 +125,7 @@ def register_callbacks(app):
                 search_modifications = bool(do_mods),
                 variable_mods   = vmods or [],
                 obs_mass_override= float(manual_mass) if manual_mass else 0.0,
+                nterm_fixed_mods= nterm_mods_list,
             )
             search_label = name
 

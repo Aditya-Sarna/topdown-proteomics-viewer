@@ -263,7 +263,8 @@ def run_targeted_search(spectrum: Spectrum,
                         search_modifications: bool = True,
                         variable_mods: Optional[List[str]] = None,
                         max_mods: int = 1,
-                        obs_mass_override: float = 0.0) -> List[SearchResult]:
+                        obs_mass_override: float = 0.0,
+                        nterm_fixed_mods: Optional[list] = None) -> List[SearchResult]:
     """
     One-spectrum-one-protein targeted search with statistical scoring.
 
@@ -287,7 +288,8 @@ def run_targeted_search(spectrum: Spectrum,
     if search_truncations:
         base_cands += _truncation_candidates(protein_sequence)
 
-    target_cands = [(s, st, en, []) for s, st, en in base_cands]
+    _fixed = list(nterm_fixed_mods or [])
+    target_cands = [(s, st, en, list(_fixed)) for s, st, en in base_cands]
     if search_modifications:
         mod_cands = _mod_candidates(base_cands[:8], variable_mods, max_mods)
         target_cands += [(s, st, en, mods) for s, st, en, mods in mod_cands[:60]]

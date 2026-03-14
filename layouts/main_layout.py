@@ -162,6 +162,52 @@ def _sidebar():
                 html.Div(id='protein-mass-display',
                          className='mt-1',
                          style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+
+                # ── N-terminal Modification quick-picker ──────────────────
+                html.Hr(style={'margin': '8px 0', 'borderColor': '#e0e0e0'}),
+                _label("N-terminal Modification"),
+                html.Div([
+                    # "No Mod" pill
+                    dbc.Button('No Mod', id='nterm-mod-none',
+                               size='sm', outline=True, color='secondary',
+                               className='me-1 mb-1',
+                               style={'fontSize': '0.7rem'}),
+                    # Common mods
+                    dbc.Button('Acetylation  +42.01', id='nterm-mod-ac',
+                               size='sm', color='danger',
+                               className='me-1 mb-1',
+                               style={'fontSize': '0.7rem', 'background': '#e53935',
+                                      'borderColor': '#e53935'}),
+                    dbc.Button('Formylation  +27.99', id='nterm-mod-fo',
+                               size='sm', color='warning',
+                               className='me-1 mb-1',
+                               style={'fontSize': '0.7rem', 'background': '#fb8c00',
+                                      'borderColor': '#fb8c00'}),
+                    dbc.Button('Trimethylation  +42.05', id='nterm-mod-tri',
+                               size='sm', color='primary',
+                               className='me-1 mb-1',
+                               style={'fontSize': '0.7rem', 'background': '#8e24aa',
+                                      'borderColor': '#8e24aa'}),
+                    dbc.Button('Palmitate  +238.23', id='nterm-mod-palm',
+                               size='sm', color='success',
+                               className='me-1 mb-1',
+                               style={'fontSize': '0.7rem', 'background': '#00897b',
+                                      'borderColor': '#00897b'}),
+                ], className='mb-1'),
+                # Custom mass input
+                dbc.InputGroup([
+                    dbc.InputGroupText('Custom', style={'fontSize': '0.7rem'}),
+                    dbc.Input(id='nterm-mod-custom-mass', type='number', step=0.0001,
+                              placeholder='mass shift (Da)',
+                              size='sm',
+                              style={'background': '#fff', 'color': '#111',
+                                     'border': '1px solid #ccc'}),
+                    dbc.Button('Apply', id='nterm-mod-custom-btn',
+                               size='sm', color='secondary', outline=True),
+                ], size='sm', className='mb-1'),
+                html.Div(id='nterm-mod-display',
+                         style={'fontSize': '0.72rem', 'color': '#1a73e8',
+                                'fontWeight': '600'}),
             ]),
             # Database / FASTA controls (hidden — disabled for now)
             html.Div(id='database-protein-controls', style={'display': 'none'}, children=[
@@ -637,6 +683,8 @@ def _stores():
         dcc.Store(id='store-search-results',     storage_type='session', data=[]),
         dcc.Store(id='store-matched-ions',       storage_type='memory',  data=[]),
         dcc.Store(id='store-selected-result',    storage_type='session', data={}),
+        dcc.Store(id='store-nterm-mod',          storage_type='session',
+                  data={'name': 'No Modification', 'mass_shift': 0.0}),
         dcc.Download(id='download-data'),
     ])
 

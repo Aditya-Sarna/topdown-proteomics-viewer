@@ -206,6 +206,43 @@ def register_callbacks(app):
         info = (f"{len(seq)} aa | Monoisotopic mass: {mass:.4f} Da")
         return prot_data, info
 
+    # ── N-terminal modification quick-picker ──────────────────────────────
+    _NTERM_PRESETS = {
+        'nterm-mod-none':  ('No Modification',  0.0),
+        'nterm-mod-ac':    ('Acetylation',      42.0106),
+        'nterm-mod-fo':    ('Formylation',      27.9949),
+        'nterm-mod-tri':   ('Trimethylation',   42.0470),
+        'nterm-mod-palm':  ('Palmitate',       238.2297),
+    }
+
+    @app.callback(
+        Output('store-nterm-mod',   'data'),
+        Output('nterm-mod-display', 'children'),
+        Input('nterm-mod-none',        'n_clicks'),
+        Input('nterm-mod-ac',          'n_clicks'),
+        Input('nterm-mod-fo',          'n_clicks'),
+        Input('nterm-mod-tri',         'n_clicks'),
+        Input('nterm-mod-palm',        'n_clicks'),
+        Input('nterm-mod-custom-btn',  'n_clicks'),
+        State('nterm-mod-custom-mass', 'value'),
+        prevent_initial_call=True,
+    )
+    def set_nterm_mod(*args):
+        from dash import ctx
+        custom_mass = args[-1]
+        btn_id = ctx.triggered_id
+        if btn_id == 'nterm-mod-custom-btn':
+            shift = float(custom_mass) if custom_mass is not None else 0.0
+            name  = f'Custom ({shift:+.4f} Da)'
+        else:
+            name, shift = _NTERM_PRESETS.get(btn_id, ('No Modification', 0.0))
+        store = {'name': name, 'mass_shift': shift}
+        if shift == 0.0:
+            display = 'N-term mod: None'
+        else:
+            display = f'N-term mod: {name}  ({shift:+.4f} Da)'
+        return store, display
+
     # ── Manual mass → mass-diff-display, mod suggestions ─────────────────
     @app.callback(
         Output('mass-diff-display', 'children'),
