@@ -3,16 +3,11 @@ ProForm Viewer — Top-Down Proteomics Analysis Tool
 Run with:  python app.py
 Then open: http://127.0.0.1:8050
 """
-import diskcache
 import dash
 import dash_bootstrap_components as dbc
-from dash import DiskcacheLongCallbackManager
 
 from layouts.main_layout import create_layout
 from callbacks import register_all_callbacks
-
-_cache = diskcache.Cache('./cache')
-_long_callback_manager = DiskcacheLongCallbackManager(_cache)
 
 app = dash.Dash(
     __name__,
@@ -23,7 +18,6 @@ app = dash.Dash(
     suppress_callback_exceptions=True,
     title='Top-Down Proteomics Viewer',
     update_title=None,
-    long_callback_manager=_long_callback_manager,
 )
 
 app.layout = create_layout()

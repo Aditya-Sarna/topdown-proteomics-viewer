@@ -235,11 +235,18 @@ def _sidebar():
         ),
 
         # ── Run Button ─────────────────────────────────────────────────────
-        dbc.Button("Run Search", id='run-search-btn',
-                   color='primary', className='w-100 mb-2 fw-bold'),
-        dbc.Progress(\n            id='search-progress-bar',\n            value=0,\n            max=100,\n            striped=True,\n            animated=True,\n            color='info',\n            style={'height': '10px', 'display': 'none'},\n            className='mb-1',\n        ),
-        html.Div(id='search-status',
-                 style={'fontSize': '0.78rem', 'color': TEXT_MUTED, 'textAlign': 'center'}),
+        dcc.Loading(
+            id='search-loading',
+            type='circle',
+            color='#2196F3',
+            children=[
+                dbc.Button('Run Search', id='run-search-btn',
+                           color='primary', className='w-100 mb-2 fw-bold'),
+                html.Div(id='search-status',
+                         style={'fontSize': '0.78rem', 'color': TEXT_MUTED,
+                                'textAlign': 'center'}),
+            ],
+        ),
 
         # ── Results Summary ─────────────────────────────────────────────────
         html.Hr(style={'borderColor': '#dddddd'}),

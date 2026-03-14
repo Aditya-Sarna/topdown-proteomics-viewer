@@ -1,4 +1,4 @@
-"""
+"""  
 Search callbacks:
   - Run Search button → store-search-results, store-matched-ions,
                         results-table, search-result-summary, top-hit-summary
@@ -32,38 +32,20 @@ def register_callbacks(app):
         State('variable-mods',           'value'),
         State('search-truncations',      'value'),
         State('search-mods',             'value'),
-        progress=[
-            Output('search-progress-bar', 'value'),
-            Output('search-status',       'children'),
-        ],
-        running=[
-            (Output('run-search-btn',      'disabled'), True,  False),
-            (Output('search-progress-bar', 'value'),    0,     0),
-            (Output('search-progress-bar', 'style'),
-             {'height': '10px', 'display': 'block', 'marginBottom': '4px'},
-             {'height': '10px', 'display': 'none'}),
-        ],
-        background=True,
         prevent_initial_call=True,
     )
-    def run_search(set_progress, n_clicks, spectra_data, scan_idx, prot_data,
+    def run_search(n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods):
-
-        def _prog(pct, label=''):
-            set_progress((pct, f'Searching… {pct}%'))
-
         if not spectra_data:
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
         if not prot_data or not prot_data.get('sequence'):
             return (no_update,) * 5 + ('⚠ Enter a protein sequence.',)
 
-        _prog(5, '5%')
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
         seq      = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
         name     = prot_data.get('name', 'Protein')
 
-        _prog(15, '15%')
         results = run_targeted_search(
             spectrum        = spectrum,
             protein_sequence= seq,
@@ -74,9 +56,7 @@ def register_callbacks(app):
             search_truncations   = bool(do_trunc),
             search_modifications = bool(do_mods),
             variable_mods   = vmods or [],
-            progress_cb     = _prog,
         )
-        _prog(90, '90%')
 
         if not results:
             return ([], [], [], 'No results found.', 'No matches.', 'No results.')

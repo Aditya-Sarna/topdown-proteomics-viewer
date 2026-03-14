@@ -103,8 +103,7 @@ def run_targeted_search(spectrum: Spectrum,
                          search_truncations: bool = True,
                          search_modifications: bool = True,
                          variable_mods: Optional[List[str]] = None,
-                         max_mods: int = 1,
-                         progress_cb=None) -> List[SearchResult]:
+                         max_mods: int = 1) -> List[SearchResult]:
     """
     One-spectrum-one-protein targeted search.
 
@@ -141,9 +140,6 @@ def run_targeted_search(spectrum: Spectrum,
     n_cands = len(full_cands)
 
     for cand_idx, (seq, start, end, mods) in enumerate(full_cands):
-        if progress_cb and n_cands > 0:
-            pct = int(15 + (cand_idx / n_cands) * 70)   # 15 → 85 %
-            progress_cb(pct, f'{pct}%')
         if len(seq) < 3:
             continue
         mod_map: Dict[int, float] = {m.position: m.mass_shift for m in mods}
