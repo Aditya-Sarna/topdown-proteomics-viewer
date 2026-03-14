@@ -66,7 +66,7 @@ def register_callbacks(app):
                    tol, max_z, ion_types, vmods, do_trunc, do_mods,
                    search_mode, fasta_proteins, do_deconv, manual_mass, nterm_mod):
         if not spectra_data:
-            return (no_update,) * 6 + ('⚠ Load a spectrum first.',)
+            return (no_update,) * 7 + ('⚠ Load a spectrum first.',)
 
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
@@ -87,7 +87,7 @@ def register_callbacks(app):
         # ── Database search mode ────────────────────────────────────────────
         if search_mode == 'database':
             if not fasta_proteins:
-                return (no_update,) * 6 + ('⚠ Upload a FASTA file first.',)
+                return (no_update,) * 7 + ('⚠ Upload a FASTA file first.',)
             proteins = [(p[0], p[1]) for p in fasta_proteins]
             results = run_database_search(
                 spectrum       = spectrum,
@@ -102,19 +102,11 @@ def register_callbacks(app):
         else:
             # ── Targeted search mode ────────────────────────────────────────
             if not prot_data or not prot_data.get('sequence'):
-                return (no_update,) * 6 + ('⚠ Enter a protein sequence.',)
+                return (no_update,) * 7 + ('⚠ Enter a protein sequence.',)
             seq  = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
             name = prot_data.get('name', 'Protein')
-            # Apply N-terminal modification mass shift if set
             nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
             nterm_name  = (nterm_mod or {}).get('name', '')
-            nterm_mods_list = []
-            if nterm_shift != 0.0:
-                from src.data.models import Modification
-                nterm_mods_list = [Modification(
-                    position=1, name=nterm_name,
-                    mass_shift=nterm_shift, residue=seq[0] if seq else ''
-                )]
             results = run_targeted_search(
                 spectrum        = spectrum,
                 protein_sequence= seq,
@@ -126,12 +118,31 @@ def register_callbacks(app):
                 search_modifications = bool(do_mods),
                 variable_mods   = vmods or [],
                 obs_mass_override= float(manual_mass) if manual_mass else 0.0,
-                nterm_fixed_mods= nterm_mods_list,
             )
             search_label = name
 
         if not results:
             return [], [], [], [], 'No results found.', 'No matches.', 'No results.', {}
+
+        # ── Apply N-term mod as annotation overlay on the top result ───────
+        if nterm_shift != 0.0 and nterm_name and results:
+            from src.data.models import Modification
+            from src.analysis.mass_utils import calc_sequence_mass, ppm_error as _ppm_err
+            from src.analysis.fragment_ions import calc_ions
+            from src.analysis.peak_matching import match_peaks as _match
+            top_pf = results[0].proteoform
+            if top_pf.sequence:
+                _mods = [m for m in top_pf.modifications if m.position != 1]
+                _mods.append(Modification(1, nterm_name, nterm_shift, top_pf.sequence[0]))
+                top_pf.modifications = _mods
+                top_pf.theoretical_mass = round(calc_sequence_mass(top_pf.sequence, _mods), 4)
+                top_pf.mass_error_da = round(top_pf.observed_mass - top_pf.theoretical_mass, 4)
+                if top_pf.theoretical_mass:
+                    top_pf.mass_error_ppm = round(_ppm_err(top_pf.observed_mass, top_pf.theoretical_mass), 2)
+                _mod_map = {m.position: m.mass_shift for m in _mods}
+                _itypes = ion_types or ['b', 'y', 'c', 'z']
+                _new_ions = calc_ions(top_pf.sequence, _itypes, _mod_map, int(max_z or 4))
+                results[0].fragment_ions = list(_match(_new_ions, spectrum, float(tol or 10)))
 
         # Store results
         results_store = [r.to_dict() for r in results]
@@ -220,9 +231,10 @@ def register_callbacks(app):
         Output('ion-table',             'data'),
         Input('results-table', 'selected_rows'),
         State('store-search-results',  'data'),
+        State('store-nterm-mod',       'data'),
         prevent_initial_call=True,
     )
-    def on_result_select(selected_rows, results_data):
+    def on_result_select(selected_rows, results_data, nterm_mod):
         if not selected_rows or not results_data:
             return no_update, no_update, no_update
 
@@ -233,6 +245,17 @@ def register_callbacks(app):
         sr   = SearchResult.from_dict(results_data[idx])
         pf   = sr.proteoform
 
+        # Annotate proteoform with the currently-selected N-term mod (sequence view)
+        nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
+        nterm_name  = (nterm_mod or {}).get('name', '')
+        if nterm_shift != 0.0 and nterm_name and pf.sequence:
+            from src.data.models import Modification
+            from src.analysis.mass_utils import calc_sequence_mass
+            _mods = [m for m in pf.modifications if m.position != 1]
+            _mods.append(Modification(1, nterm_name, nterm_shift, pf.sequence[0]))
+            pf.modifications = _mods
+            pf.theoretical_mass = round(calc_sequence_mass(pf.sequence, _mods), 4)
+
         ions_data = [ion.to_dict() for ion in sr.fragment_ions]
 
         # Ion table
@@ -242,6 +265,65 @@ def register_callbacks(app):
         ]
 
         return pf.to_dict(), ions_data, ion_rows
+
+    # ── N-term mod overlay: immediately re-annotate current result ─────────
+    @app.callback(
+        Output('store-selected-result', 'data', allow_duplicate=True),
+        Output('store-matched-ions',    'data', allow_duplicate=True),
+        Input('store-nterm-mod', 'data'),
+        State('store-selected-result',   'data'),
+        State('store-spectra',           'data'),
+        State('store-selected-scan-idx', 'data'),
+        State('tolerance-ppm',           'value'),
+        State('max-charge',              'value'),
+        State('ion-types',               'value'),
+        prevent_initial_call=True,
+    )
+    def apply_nterm_mod_overlay(nterm_mod, selected_result, spectra_data, scan_idx,
+                                tol, max_z, ion_types):
+        """Apply (or remove) the N-term mod on the currently displayed proteoform
+        without re-running a full database/targeted search.  Gives instant visual
+        feedback in the Sequence and Spectrum tabs."""
+        if not selected_result or not spectra_data:
+            return no_update, no_update
+
+        from src.data.models import Proteoform, Modification
+        from src.analysis.fragment_ions import calc_ions
+        from src.analysis.peak_matching import match_peaks
+        from src.analysis.mass_utils import calc_sequence_mass
+
+        pf = Proteoform.from_dict(selected_result)
+        if not pf.sequence:
+            return no_update, no_update
+
+        # Rebuild mod list: keep any mods that are NOT at position 1, then
+        # optionally add the new N-term mod.
+        mods = [m for m in pf.modifications if m.position != 1]
+        nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
+        nterm_name  = (nterm_mod or {}).get('name', '')
+        if nterm_shift != 0.0 and nterm_name:
+            mods.append(Modification(
+                position=1, name=nterm_name,
+                mass_shift=nterm_shift, residue=pf.sequence[0],
+            ))
+
+        # Update proteoform in-place (dataclass is mutable)
+        pf.modifications = mods
+        pf.theoretical_mass = round(calc_sequence_mass(pf.sequence, mods), 4)
+        pf.mass_error_da  = round(pf.observed_mass - pf.theoretical_mass, 4)
+        if pf.theoretical_mass:
+            from src.analysis.mass_utils import ppm_error
+            pf.mass_error_ppm = round(ppm_error(pf.observed_mass, pf.theoretical_mass), 2)
+
+        # Recompute fragment ions with the updated mod map
+        mod_map   = {m.position: m.mass_shift for m in mods}
+        _ion_types = ion_types or ['b', 'y', 'c', 'z']
+        ions = calc_ions(pf.sequence, _ion_types, mod_map, int(max_z or 4))
+
+        spectrum = Spectrum.from_dict(spectra_data[scan_idx or 0])
+        matched  = match_peaks(ions, spectrum, float(tol or 10))
+
+        return pf.to_dict(), [ion.to_dict() for ion in matched]
 
     # ── Score distribution (updates whenever search results change) ─────────
     @app.callback(

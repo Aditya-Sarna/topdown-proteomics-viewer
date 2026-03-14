@@ -188,7 +188,8 @@ def _score_candidates(candidates: List[Tuple],
                       tolerance_ppm: float,
                       obs_mass: float,
                       protein_name: str,
-                      is_decoy: bool) -> List[SearchResult]:
+                      is_decoy: bool,
+                      no_mass_penalty: bool = False) -> List[SearchResult]:
     results: List[SearchResult] = []
     for seq, start, end, mods in candidates:
         if len(seq) < 3:
@@ -214,7 +215,9 @@ def _score_candidates(candidates: List[Tuple],
             continue
 
         frac  = n_matched / n_total
-        score = _score(n_matched, n_b, n_y, n_c, n_z, frac, obs_mass, th_mass)
+        score = _score(n_matched, n_b, n_y, n_c, n_z, frac,
+                       0.0 if no_mass_penalty else obs_mass,
+                       th_mass)
         cov   = sequence_coverage_pct(seq, matched)
         n_tags     = count_sequence_tags(seq, matched)
         matched_aa = round(cov * len(seq) / 100)
@@ -289,11 +292,17 @@ def run_targeted_search(spectrum: Spectrum,
         base_cands += _truncation_candidates(protein_sequence)
 
     _fixed = list(nterm_fixed_mods or [])
-    target_cands = [(s, st, en, list(_fixed)) for s, st, en in base_cands]
+    # Base candidates all carry the user-declared fixed N-term mod (may be empty)
+    fixed_cands = [(s, st, en, list(_fixed)) for s, st, en in base_cands]
+    # Variable-mod candidates use base_cands without the N-term fixed mod
+    var_cands: List[tuple] = []
     if search_modifications:
         mod_cands = _mod_candidates(base_cands[:8], variable_mods, max_mods)
-        target_cands += [(s, st, en, mods) for s, st, en, mods in mod_cands[:60]]
-    target_cands = target_cands[:100]
+        var_cands = [(s, st, en, mods) for s, st, en, mods in mod_cands[:60]]
+    # Combined (capped at 100 total) but kept separate for scoring
+    fixed_cands = fixed_cands[:80]
+    var_cands   = var_cands[:20]
+    target_cands = fixed_cands + var_cands  # for decoy/evalue bookkeeping
 
     # ── Build decoy candidates (reversed sequence) ─────────────────────────
     decoy_seq   = protein_sequence[::-1]
@@ -309,9 +318,17 @@ def run_targeted_search(spectrum: Spectrum,
     n_total_candidates = len(target_cands) + len(decoy_cands)
 
     # ── Score both passes ──────────────────────────────────────────────────
-    target_results = _score_candidates(target_cands, spectrum, ion_types,
-                                       max_charge, tolerance_ppm, obs_mass,
-                                       protein_name, is_decoy=False)
+    # Fixed-mod candidates: skip the mass penalty (user declared these mods).
+    # Variable-mod candidates: apply normal mass penalty.
+    fixed_results = _score_candidates(fixed_cands, spectrum, ion_types,
+                                      max_charge, tolerance_ppm, obs_mass,
+                                      protein_name, is_decoy=False,
+                                      no_mass_penalty=bool(_fixed))
+    var_results   = _score_candidates(var_cands, spectrum, ion_types,
+                                      max_charge, tolerance_ppm, obs_mass,
+                                      protein_name, is_decoy=False,
+                                      no_mass_penalty=False)
+    target_results = fixed_results + var_results
     decoy_results  = _score_candidates(decoy_cands, spectrum, ion_types,
                                        max_charge, tolerance_ppm, obs_mass,
                                        protein_name, is_decoy=True)
