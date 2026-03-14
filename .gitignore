@@ -10,4 +10,4 @@ dist/
 build/
 .DS_Store
 *.mzML
-!demo_data/openms_BSA1.mzML
+!demo_data/BSA_sample.mzML

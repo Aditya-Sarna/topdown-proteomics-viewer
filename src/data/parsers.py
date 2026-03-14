@@ -22,7 +22,7 @@ _DEMO_URLS = [
     (
         'https://raw.githubusercontent.com/OpenMS/OpenMS/develop/share/OpenMS/examples/'
         'BSA/BSA1.mzML',
-        'openms_BSA1.mzML',
+        'BSA_sample.mzML',
     ),
 ]
 
@@ -311,10 +311,10 @@ def parse_pcml(file_bytes: bytes, filename: str) -> Tuple[List[Spectrum], List[F
 # ---------------------------------------------------------------------------
 
 # Built-in demo protein database — matches the bundled demo files:
-#   demo.pcml / demo  = Ubiquitin
+#   ubiquitin.pcml    = Ubiquitin
 #   hemoglobin_beta   = HBB (human hemoglobin β-chain)
 #   insulin_b_chain   = INS (human insulin B-chain)
-#   openms_BSA1.mzML  = BSA (bovine serum albumin)
+#   BSA_sample.mzML   = BSA (bovine serum albumin)
 #   serum_albumin_n49 = HSA (human serum albumin)
 # Also includes hemoglobin α-chain (common companion to β search).
 DEMO_FASTA = """\

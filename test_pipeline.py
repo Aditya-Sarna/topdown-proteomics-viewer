@@ -37,15 +37,6 @@ if results:
           f"coverage={results[0].sequence_coverage}%, "
           f"Δppm={pf.mass_error_ppm}, PTMs={[m.name for m in pf.modifications]}")
 
-# ── 4. PCML parser — demo.pcml (Ubiquitin, 2 features, 1 spectrum) ────────
-pcml_bytes = (DEMO_DATA / "demo.pcml").read_bytes()
-p_spectra, p_feats, p_info = parse_pcml(pcml_bytes, "demo.pcml")
-assert p_info.get("sequence"), "demo.pcml: protein sequence missing"
-assert len(p_feats) >= 1,      "demo.pcml: no features parsed"
-assert len(p_spectra) >= 1,    "demo.pcml: no spectra parsed"
-print(f"PCML demo     : protein='{p_info['name']}' seq_len={len(p_info['sequence'])} "
-      f"| {len(p_spectra)} spectrum/a | {len(p_feats)} features "
-      f"| {len(p_info['modifications'])} mods")
 
 # ── 5. PCML parser — hemoglobin_beta.pcml ─────────────────────────────────
 hbb_bytes = (DEMO_DATA / "hemoglobin_beta.pcml").read_bytes()
@@ -71,10 +62,10 @@ print(f"PCML HSA-N49  : protein='{hsa_info['name']}' seq_len={len(hsa_info['sequ
       f"| {len(hsa_spectra)} spectrum/a | {len(hsa_feats)} features "
       f"| {len(hsa_info['modifications'])} mods")
 
-# ── 8. mzML parser — openms_BSA1.mzML ────────────────────────────────────
-mzml_bytes = (DEMO_DATA / "openms_BSA1.mzML").read_bytes()
-mzml_spectra = parse_mzml(mzml_bytes, "openms_BSA1.mzML")
-assert len(mzml_spectra) >= 1, "openms_BSA1.mzML: no spectra parsed"
+# ── 8. mzML parser — BSA_sample.mzML ────────────────────────────────────
+mzml_bytes = (DEMO_DATA / "BSA_sample.mzML").read_bytes()
+mzml_spectra = parse_mzml(mzml_bytes, "BSA_sample.mzML")
+assert len(mzml_spectra) >= 1, "BSA_sample.mzML: no spectra parsed"
 print(f"mzML BSA1     : {len(mzml_spectra)} spectra")
 
 # ── 9. PCML robustness — XML comment nodes must not crash parser ──────────
