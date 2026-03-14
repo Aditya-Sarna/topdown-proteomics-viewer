@@ -44,6 +44,7 @@ def register_callbacks(app):
         Output('search-result-summary', 'children'),
         Output('search-status',         'children'),
         Output('top-hit-summary',       'children'),
+        Output('store-selected-result', 'data', allow_duplicate=True),
         Input('run-search-btn', 'n_clicks'),
         State('store-spectra',           'data'),
         State('store-selected-scan-idx', 'data'),
@@ -130,7 +131,7 @@ def register_callbacks(app):
             search_label = name
 
         if not results:
-            return [], [], [], [], 'No results found.', 'No matches.', 'No results.'
+            return [], [], [], [], 'No results found.', 'No matches.', 'No results.', {}
 
         # Store results
         results_store = [r.to_dict() for r in results]
@@ -210,7 +211,7 @@ def register_callbacks(app):
             for ion in sorted(top.fragment_ions, key=lambda x: (x.ion_type, x.position))
         ]
 
-        return results_store, ions_data, table_rows, top_ion_rows, summary, f'✓ {n} hits', top_text
+        return results_store, ions_data, table_rows, top_ion_rows, summary, f'✓ {n} hits', top_text, top.proteoform.to_dict()
 
     # ── Select row in results table → update selected proteoform ──────────
     @app.callback(
