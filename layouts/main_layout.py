@@ -195,7 +195,7 @@ def _sidebar():
             # Database controls (hidden until mode == 'database')
             html.Div(id='database-protein-controls', style={'display': 'none'}, children=[
                 dbc.Button(
-                    '⚡ Load Demo DB (Ubiquitin, HBB, BSA, HSA, Insulin)',
+                    'Load Demo DB (Ubiquitin, HBB, BSA, HSA, Insulin)',
                     id='load-demo-db-btn',
                     color='success', outline=True, size='sm',
                     className='w-100 mb-2',
