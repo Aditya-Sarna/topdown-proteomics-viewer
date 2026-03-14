@@ -100,18 +100,13 @@ with st.sidebar:
     # Hardcoded demo entries — label → filename in demo_data/
     _DEMO_OPTIONS: dict[str, str | None] = {
         "— select a dataset —": None,
-        # ── PCML temporarily removed ──────────────────────────────────────
-        # "Hemoglobin Beta · PCML (spectra + features + sequence)": "hemoglobin_beta.pcml",
-        # "Insulin B Chain · PCML (spectra + features + sequence)": "insulin_b_chain.pcml",
-        # "Serum Albumin N49 · PCML (spectra + features + sequence)": "serum_albumin_n49.pcml",
-        # ── mzML + auto-loaded features CSV ───────────────────────────────
-        "Hemoglobin Beta · mzML (3 scans, 3 features)": "hemoglobin_beta.mzML",
-        "Hemoglobin Alpha · mzML (3 scans, 3 features)": "hemoglobin_alpha.mzML",
-        "Insulin B Chain · mzML (3 scans, 3 features)": "insulin_b_chain.mzML",
-        "Serum Albumin N49 · mzML (3 scans, 3 features)": "serum_albumin_n49.mzML",
-        "Ubiquitin · mzML (3 scans, 3 features)": "ubiquitin.mzML",
-        "Cytochrome C · mzML (3 scans, 3 features)": "cytochrome_c.mzML",
-        "Thioredoxin · mzML (3 scans, 3 features)": "thioredoxin.mzML",
+        "Hemoglobin Beta":    "hemoglobin_beta.mzML",
+        "Hemoglobin Alpha":   "hemoglobin_alpha.mzML",
+        "Insulin B Chain":    "insulin_b_chain.mzML",
+        "Serum Albumin N49":  "serum_albumin_n49.mzML",
+        "Ubiquitin":          "ubiquitin.mzML",
+        "Cytochrome C":       "cytochrome_c.mzML",
+        "Thioredoxin":        "thioredoxin.mzML",
     }
     _selected_demo = st.selectbox(
         "Select dataset",
