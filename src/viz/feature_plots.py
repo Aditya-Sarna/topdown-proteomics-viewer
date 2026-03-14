@@ -247,3 +247,142 @@ def create_feature_3d_plot(features: List[Feature]) -> go.Figure:
         margin=dict(l=0, r=0, t=50, b=0),
     )
     return fig
+
+
+def create_xic_plot(spectra: list, feature: Optional[Feature] = None,
+                    mz_tolerance_ppm: float = 10.0) -> go.Figure:
+    """
+    Extracted Ion Chromatogram (XIC) computed from real MS1 spectra.
+
+    For every MS1 scan in *spectra*, sums the intensity of all peaks that
+    fall within the feature's m/z window (mz_start..mz_end, or
+    mz_apex ± mz_tolerance_ppm if the window is unknown).
+
+    Parameters
+    ----------
+    spectra : list of Spectrum.to_dict() dicts (from store-spectra)
+    feature : selected Feature whose m/z window defines the extraction
+    mz_tolerance_ppm : fallback ppm window when mz_start/mz_end are 0
+    """
+    fig = go.Figure()
+    empty_layout = dict(
+        template='plotly_white',
+        paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+        font=dict(color='#aaaaaa'),
+        height=280,
+        margin=dict(l=55, r=20, t=55, b=40),
+    )
+
+    if not spectra:
+        fig.update_layout(title='Load a spectrum file to see XIC', **empty_layout)
+        return fig
+
+    if feature is None:
+        fig.update_layout(title='Click a feature on the map to see its XIC', **empty_layout)
+        return fig
+
+    # Determine m/z extraction window
+    mz_lo = feature.mz_start
+    mz_hi = feature.mz_end
+    if mz_lo <= 0 or mz_hi <= 0 or mz_hi <= mz_lo:
+        tol = feature.mz_apex * mz_tolerance_ppm / 1e6
+        mz_lo = feature.mz_apex - tol
+        mz_hi = feature.mz_apex + tol
+
+    # Extract XIC across MS1 scans
+    rts, xic, all_rts, all_xic = [], [], [], []
+    for sd in spectra:
+        if sd.get('ms_level', 2) != 1:
+            continue
+        rt  = sd.get('retention_time', 0.0)
+        mzs = np.asarray(sd.get('mz', []), dtype=np.float64)
+        ints = np.asarray(sd.get('intensity', []), dtype=np.float64)
+        if len(mzs) == 0:
+            continue
+        mask = (mzs >= mz_lo) & (mzs <= mz_hi)
+        xic_val = float(ints[mask].sum())
+        all_rts.append(rt)
+        all_xic.append(xic_val)
+
+    if not all_rts:
+        fig.update_layout(title='No MS1 scans in loaded data — XIC unavailable',
+                          **empty_layout)
+        return fig
+
+    all_rts  = np.array(all_rts)
+    all_xic  = np.array(all_xic)
+    order    = np.argsort(all_rts)
+    all_rts  = all_rts[order]
+    all_xic  = all_xic[order]
+
+    # Background TIC-like trace (faint)
+    fig.add_trace(go.Scatter(
+        x=all_rts, y=all_xic,
+        mode='lines',
+        line=dict(color='rgba(0,0,0,0.12)', width=1),
+        fill='tozeroy',
+        fillcolor='rgba(0,0,0,0.04)',
+        name='XIC (full RT)',
+        showlegend=True,
+        hovertemplate='RT: %{x:.3f} min<br>Intensity: %{y:.3e}<extra></extra>',
+    ))
+
+    # Highlight the feature's RT window
+    rt_lo = feature.rt_start if feature.rt_start > 0 else (feature.rt_apex - 0.5)
+    rt_hi = feature.rt_end   if feature.rt_end   > 0 else (feature.rt_apex + 0.5)
+    in_window = (all_rts >= rt_lo) & (all_rts <= rt_hi)
+    if in_window.any():
+        fig.add_trace(go.Scatter(
+            x=all_rts[in_window], y=all_xic[in_window],
+            mode='lines',
+            line=dict(color='#1a73e8', width=2.5),
+            fill='tozeroy',
+            fillcolor='rgba(26,115,232,0.18)',
+            name=f"{feature.feature_id} window",
+            hovertemplate='RT: %{x:.3f} min<br>Intensity: %{y:.3e}<extra></extra>',
+        ))
+
+    # Apex vertical line
+    fig.add_vline(
+        x=feature.rt_apex,
+        line_dash='dash', line_color='#1a73e8', line_width=1.5,
+        annotation_text=f"apex {feature.rt_apex:.2f} min",
+        annotation_font_size=9, annotation_font_color='#1a73e8',
+    )
+
+    # Feature RT window shaded region
+    fig.add_vrect(
+        x0=rt_lo, x1=rt_hi,
+        fillcolor='rgba(26,115,232,0.06)',
+        layer='below', line_width=0,
+    )
+
+    # Peak intensity annotation
+    if in_window.any():
+        peak_rt  = float(all_rts[in_window][np.argmax(all_xic[in_window])])
+        peak_int = float(all_xic[in_window].max())
+        fig.add_annotation(
+            x=peak_rt, y=peak_int,
+            text=f"{peak_int:.2e}",
+            showarrow=True, arrowhead=2, arrowsize=0.8,
+            arrowcolor='#1a73e8', font=dict(size=9, color='#1a73e8'),
+            ay=-28, ax=0,
+        )
+
+    fig.update_layout(
+        template='plotly_white',
+        title=(
+            f'<b>XIC</b> — {feature.feature_id} '
+            f'| m/z {mz_lo:.3f}–{mz_hi:.3f} '
+            f'| z={feature.charge}'
+        ),
+        xaxis_title='Retention Time (min)',
+        yaxis_title='Summed Intensity',
+        paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+        font=dict(color='#111111'),
+        height=280,
+        legend=dict(orientation='h', yanchor='bottom', y=1.01,
+                    font=dict(size=10)),
+        margin=dict(l=55, r=20, t=65, b=40),
+    )
+    return fig

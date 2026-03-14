@@ -4,7 +4,7 @@ Feature map and intensity trace callbacks.
 from dash import Input, Output, State
 
 from src.data.models import Feature, Proteoform
-from src.viz.feature_plots import create_feature_map, create_intensity_trace, create_feature_3d_plot
+from src.viz.feature_plots import create_feature_map, create_intensity_trace, create_feature_3d_plot, create_xic_plot
 
 
 def register_callbacks(app):
@@ -90,3 +90,45 @@ def register_callbacks(app):
     def update_feature_3d(feats_data):
         features = [Feature.from_dict(d) for d in (feats_data or [])]
         return create_feature_3d_plot(features)
+
+    # XIC — Extracted Ion Chromatogram from real MS1 spectra
+    @app.callback(
+        Output('xic-graph', 'figure'),
+        Output('xic-label', 'children'),
+        Input('feature-map-graph', 'clickData'),
+        Input('feature-filter', 'value'),
+        State('store-features', 'data'),
+        State('store-spectra',  'data'),
+    )
+    def update_xic(click_data, fid_filter, feats_data, spectra_data):
+        selected_id = None
+        if click_data:
+            try:
+                selected_id = click_data['points'][0]['customdata'][0]
+            except (KeyError, IndexError, TypeError):
+                pass
+        if fid_filter:
+            selected_id = fid_filter.strip()
+
+        feature = None
+        if selected_id and feats_data:
+            for d in feats_data:
+                if d.get('feature_id') == selected_id:
+                    feature = Feature.from_dict(d)
+                    break
+
+        # If nothing selected, default to the highest-intensity feature
+        if feature is None and feats_data:
+            feature = Feature.from_dict(
+                max(feats_data, key=lambda d: d.get('intensity', 0))
+            )
+
+        spectra_list = spectra_data or []
+        fig = create_xic_plot(spectra_list, feature)
+
+        label = (
+            f'Extracted Ion Chromatogram — {feature.feature_id} '
+            f'(m/z {feature.mz_apex:.3f}, z={feature.charge})'
+            if feature else 'Extracted Ion Chromatogram (XIC)'
+        )
+        return fig, label

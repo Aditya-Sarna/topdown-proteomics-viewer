@@ -448,6 +448,12 @@ def _tab_features():
                        dcc.Graph(id='feature-map-graph', config={'displayModeBar': True},
                                  style={'height': '480px'}),
                        html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Extracted Ion Chromatogram (XIC)',
+                               className='text-muted small mb-1',
+                               id='xic-label'),
+                       dcc.Graph(id='xic-graph', config={'displayModeBar': True},
+                                 style={'height': '280px'}),
+                       html.Hr(style={'borderColor': '#dddddd'}),
                        dbc.Row([
                            dbc.Col([
                                _label("Theoretical mass for overlay (Da)"),
