@@ -31,8 +31,55 @@ _DEMO_URLS = [
 # mzML parser
 # ---------------------------------------------------------------------------
 
+def _parse_mzml_pyopenms(file_bytes: bytes, filename: str) -> List[Spectrum]:
+    """Parse mzML using pyopenms (primary parser — more robust encoding support)."""
+    import tempfile, os as _os
+    import pyopenms
+
+    spectra: List[Spectrum] = []
+    with tempfile.NamedTemporaryFile(suffix='.mzML', delete=False) as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
+    try:
+        exp = pyopenms.MSExperiment()
+        pyopenms.MzMLFile().load(tmp_path, exp)
+        for spec in exp:
+            if spec.getMSLevel() < 2:
+                continue
+            mz_arr, int_arr = spec.get_peaks()
+            mz_arr  = np.asarray(mz_arr,  dtype=np.float64)
+            int_arr = np.asarray(int_arr, dtype=np.float64)
+            rt = spec.getRT() / 60.0   # convert seconds → minutes
+            prec_mz, prec_charge, prec_mass = 0.0, 0, 0.0
+            if spec.getPrecursors():
+                p = spec.getPrecursors()[0]
+                prec_mz     = p.getMZ()
+                prec_charge = p.getCharge()
+                prec_mass   = prec_mz * prec_charge - prec_charge * 1.007276 if prec_charge else 0.0
+            spectra.append(Spectrum(
+                scan_id=spec.getNativeID() or f'scan_{len(spectra)+1}',
+                mz_array=mz_arr,
+                intensity_array=int_arr,
+                retention_time=rt,
+                precursor_mz=prec_mz,
+                precursor_charge=prec_charge,
+                precursor_mass=prec_mass,
+                ms_level=2,
+                file_name=filename,
+            ))
+    finally:
+        _os.unlink(tmp_path)
+    return spectra
+
+
 def parse_mzml(file_bytes: bytes, filename: str) -> List[Spectrum]:
-    """Parse an mzML file; returns MS2 spectra only."""
+    """Parse an mzML file; uses pyopenms when available, falls back to pyteomics."""
+    try:
+        import pyopenms  # noqa: F401
+        return _parse_mzml_pyopenms(file_bytes, filename)
+    except Exception:
+        pass  # fall through to pyteomics
+
     try:
         from pyteomics import mzml
         spectra: List[Spectrum] = []
@@ -67,7 +114,7 @@ def parse_mzml(file_bytes: bytes, filename: str) -> List[Spectrum]:
     except ImportError:
         return []
     except Exception as e:
-        print(f"mzML parse error: {e}")
+        print(f"mzML parse error (pyteomics): {e}")
         return []
 
 

@@ -9,6 +9,7 @@ import dash
 
 from src.data.models import Spectrum, SearchResult, FragmentIon
 from src.analysis.proteoform_search import run_targeted_search, run_database_search
+from src.analysis.deconvolution import deconvolute_spectrum
 from src.data.amino_acids import AA_MASSES
 
 
@@ -34,16 +35,30 @@ def register_callbacks(app):
         State('search-mods',             'value'),
         State('search-mode',             'value'),
         State('store-fasta-proteins',    'data'),
+        State('deconvolute-spectrum',    'value'),
         prevent_initial_call=True,
     )
     def run_search(n_clicks, spectra_data, scan_idx, prot_data,
                    tol, max_z, ion_types, vmods, do_trunc, do_mods,
-                   search_mode, fasta_proteins):
+                   search_mode, fasta_proteins, do_deconv):
         if not spectra_data:
             return (no_update,) * 5 + ('⚠ Load a spectrum first.',)
 
         scan_idx = scan_idx or 0
         spectrum = Spectrum.from_dict(spectra_data[scan_idx])
+
+        # ── Optional charge deconvolution via pyopenms.Deisotoper ──────────
+        deconv_note = ''
+        if do_deconv:
+            dr = deconvolute_spectrum(
+                spectrum,
+                fragment_tolerance_ppm=float(tol or 10),
+                max_charge=int(max_z or 20),
+            )
+            spectrum = dr.spectrum
+            if dr.used_openms:
+                deconv_note = (f' [Deconvoluted: {dr.n_original_peaks}→'
+                               f'{dr.n_deconvoluted_peaks} peaks via OpenMS]')
 
         # ── Database search mode ────────────────────────────────────────────
         if search_mode == 'database':
@@ -124,7 +139,8 @@ def register_callbacks(app):
         n = len(results)
         summary = (f"{n} candidate(s) found for {search_label} | "
                    f"Scan {spectrum.scan_id} | "
-                   f"Tolerance {tol} ppm")
+                   f"Tolerance {tol} ppm"
+                   f"{deconv_note}")
 
         # Top hit summary (sidebar)
         pf0 = top.proteoform

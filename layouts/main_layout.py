@@ -272,6 +272,13 @@ def _sidebar():
                 ], width=6),
             ], className='g-1 mb-1'),
 
+            dbc.Row([
+                dbc.Col([
+                    _label("Deconvolute (OpenMS)"),
+                    dbc.Switch(id='deconvolute-spectrum', value=False, label=''),
+                ], width=12),
+            ], className='g-1 mb-1'),
+
             _label("Variable PTMs"),
             dcc.Dropdown(
                 id='variable-mods',
