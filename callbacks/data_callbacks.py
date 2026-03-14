@@ -45,11 +45,11 @@ def register_callbacks(app):
         Output('upload-spectrum-status','children'),
         Output('protein-name',          'value'),
         Output('protein-sequence',      'value'),
+        Input('demo-file-select', 'value'),
         Input('load-demo-btn', 'n_clicks'),
-        State('demo-file-select', 'value'),
         prevent_initial_call=True,
     )
-    def load_demo(_, selected_file):
+    def load_demo(selected_file, _):
         if selected_file:
             spectra, feats, pinfo = _load_demo_file(selected_file)
             if not spectra and not feats and not (pinfo or {}).get('sequence'):
@@ -120,11 +120,11 @@ def register_callbacks(app):
     @app.callback(
         Output('store-features', 'data'),
         Output('upload-features-status', 'children'),
+        Input('demo-file-select', 'value'),
         Input('load-demo-btn', 'n_clicks'),
-        State('demo-file-select', 'value'),
         prevent_initial_call=True,
     )
-    def load_demo_features(_, selected_file):
+    def load_demo_features(selected_file, _):
         if selected_file:
             _, feats, _ = _load_demo_file(selected_file)
             if feats:

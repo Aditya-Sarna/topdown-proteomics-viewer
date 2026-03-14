@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mzML xmlns="http://psi.hupo.org/ms/mzml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <cvList count="2">
+    <cv id="MS" fullName="Proteomics Standards Initiative Mass Spectrometry Ontology" URI="https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo"/>
+    <cv id="UO" fullName="Unit Ontology" URI="https://raw.githubusercontent.com/bio-ontology-research-group/unit-ontology/master/unit.obo"/>
+  </cvList>
+  <fileDescription>
+    <fileContent>
+      <cvParam cvRef="MS" accession="MS:1000580" name="MSn spectrum"/>
+    </fileContent>
+  </fileDescription>
+  <softwareList count="1">
+    <software id="sw1" version="1.0">
+      <cvParam cvRef="MS" accession="MS:1000799" name="custom unreleased software tool"/>
+    </software>
+  </softwareList>
+  <dataProcessingList count="1">
+    <dataProcessing id="dp1">
+      <processingMethod order="0" softwareRef="sw1"/>
+    </dataProcessing>
+  </dataProcessingList>
+  <run>
+    <spectrumList count="1" defaultDataProcessingRef="dp1">
+      <spectrum index="0" id="scan=884" defaultArrayLength="58">
+        <cvParam cvRef="MS" accession="MS:1000511" name="ms level" value="2"/>
+        <scanList count="1">
+          <scan>
+            <cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value="23.8000" unitCvRef="UO" unitAccession="UO:0000031" unitName="minute"/>
+          </scan>
+        </scanList>
+        <precursorList count="1">
+          <precursor>
+            <selectedIonList count="1">
+              <selectedIon>
+                <cvParam cvRef="MS" accession="MS:1000744" name="selected ion m/z" value="1143.568780"/>
+                <cvParam cvRef="MS" accession="MS:1000041" name="charge state" value="3"/>
+              </selectedIon>
+            </selectedIonList>
+          </precursor>
+        </precursorList>
+        <binaryDataArrayList count="2">
+          <binaryDataArray encodedLength="620">
+            <cvParam cvRef="MS" accession="MS:1000514" name="m/z array"/>
+            <cvParam cvRef="MS" accession="MS:1000523" name="64-bit float"/>
+            <cvParam cvRef="MS" accession="MS:1000576" name="no compression"/>
+            <binary>+U7MejEEXkBMVG8NbIJiQFFrmnec5G5AMPXzpiIFb0Avo1huaZN1QO9VKxP+knZA9S1zuizke0AhWcAE7pN+QNNNYhCYCoNA04cuqG+Sg0AKv9TPGxuHQJQT7Soko4dApKoJoi5TikAEHEKVWhuMQFXZd0WwO4xAtkqwONwDjkDy7zMunNOOQI1iuaVVcpFAmiUBagqOkUA1QdR9YFKTQBnnb0KBdpNAyR8MPJdalEAWpBmLpt6UQJaVJqWg9pVAoijQJ9LilkB3+Guy5oKXQA0a+if4/pdAEhQ/xjxHmUCoNc07TsOZQH5v059905tAFZFhFY9PnEAai6az05edQLCsNCnlE55AhXzQs/mznkCRD3o2K6CfQIiAQ6gSXKBAr0LKTxqeoEAHX5hMJRChQPkx5q41IqFAxr/PuGAEokBNofMaOxKiQJdWQ+J+FqNA5j+k325Ko0A+XHLcebyjQJLLf0iPxKNA6udNRZo2pECuDRXjnOKkQNEi2/meBKVAn7DEA8rmpUAfv7fpvwimQG9HOC3o+KZA1eyBVuBOp0DV52orBvmnQC0+BcD4GKhAQBNhwxPbqEDeq1YmHN2oQE9d+Sw/o6lAHPD5YUTbqUA=</binary>
+          </binaryDataArray>
+          <binaryDataArray encodedLength="620">
+            <cvParam cvRef="MS" accession="MS:1000515" name="intensity array"/>
+            <cvParam cvRef="MS" accession="MS:1000523" name="64-bit float"/>
+            <cvParam cvRef="MS" accession="MS:1000576" name="no compression"/>
+            <binary>AAAAAACI40AAAAAAANvqQAAAAAAAdvZAAAAAAAB89UAAAAAAgBP8QAAAAAAATP1AAAAAAECzAUEAAAAAwOsCQQAAAADAXAVBAAAAAIA3BkEAAAAAAO0HQQAAAABAEgdBAAAAAECJCEEAAAAAgLoFQQAAAACAPQVBAAAAAMBiBEEAAAAAwFYGQQAAAABABglBAAAAAICiCUEAAAAAQHcLQQAAAACAnApBAAAAAMDNB0EAAAAAgBMMQQAAAAAA4QlBAAAAAEDoDUEAAAAAwLULQQAAAADAPgpBAAAAAADPDEEAAAAAAEYOQQAAAAAAQA9BAAAAAMCpDUEAAAAAANULQQAAAADAPgpBAAAAAIArCEEAAAAAQAYJQQAAAABAEgdBAAAAAAB8BUEAAAAAQCQEQQAAAACASQNBAAAAAECzAUEAAAAAgNgAQQAAAACAAf9AAAAAAIAN/UAAAAAAAF76QAAAAACAJflAAAAAAADz9kAAAAAAAHz1QAAAAAAABfRAAAAAAIBP8kAAAAAAABfxQAAAAAAAQO9AAAAAAABS7EAAAAAAAGTpQAAAAAAA8+ZAAAAAAACC5EAAAAAAAAvjQAAAAAAAF+FAAAAAAABG3kA=</binary>
+          </binaryDataArray>
+        </binaryDataArrayList>
+      </spectrum>
+    </spectrumList>
+  </run>
+</mzML>
