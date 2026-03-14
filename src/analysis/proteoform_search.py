@@ -285,6 +285,8 @@ def run_targeted_search(spectrum: Spectrum,
         obs_mass = spectrum.precursor_mass
     elif spectrum.precursor_mz > 0 and spectrum.precursor_charge > 0:
         obs_mass = mz_to_mass(spectrum.precursor_mz, spectrum.precursor_charge)
+    if obs_mass_override > 0:
+        obs_mass = obs_mass_override
 
     # ── Build target candidates ────────────────────────────────────────────
     base_cands = [(protein_sequence, 1, len(protein_sequence))]

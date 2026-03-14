@@ -84,6 +84,10 @@ def register_callbacks(app):
                 deconv_note = (f' [Deconvoluted: {dr.n_original_peaks}→'
                                f'{dr.n_deconvoluted_peaks} peaks via OpenMS]')
 
+        # ── N-term mod values (always available, used after both branches) ────
+        nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
+        nterm_name  = (nterm_mod or {}).get('name', '')
+
         # ── Database search mode ────────────────────────────────────────────
         if search_mode == 'database':
             if not fasta_proteins:
@@ -105,8 +109,6 @@ def register_callbacks(app):
                 return (no_update,) * 7 + ('⚠ Enter a protein sequence.',)
             seq  = ''.join(c for c in prot_data['sequence'] if c in AA_MASSES)
             name = prot_data.get('name', 'Protein')
-            nterm_shift = float((nterm_mod or {}).get('mass_shift', 0.0))
-            nterm_name  = (nterm_mod or {}).get('name', '')
             results = run_targeted_search(
                 spectrum        = spectrum,
                 protein_sequence= seq,
