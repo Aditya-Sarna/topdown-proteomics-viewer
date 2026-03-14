@@ -185,7 +185,7 @@ def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
 
     norm = ints / ints.max() * 100.0 if ints.max() > 0 else ints
     xs, ys = _lines(masses, norm)
-    note   = 'OpenMS' if dr.used_openms else 'raw (pyopenms unavailable)'
+    note   = 'OpenMS' if dr.used_openms else 'raw'
 
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='lines',
