@@ -133,10 +133,10 @@ with st.sidebar:
     # Hardcoded demo entries — label → filename in demo_data/
     _DEMO_OPTIONS: dict[str, str | None] = {
         "— select a dataset —": None,
-        # ── PCML (spectra + features + sequence) ──────────────────────────
-        "Hemoglobin Beta · PCML (spectra + features + sequence)": "hemoglobin_beta.pcml",
-        "Insulin B Chain · PCML (spectra + features + sequence)": "insulin_b_chain.pcml",
-        "Serum Albumin N49 · PCML (spectra + features + sequence)": "serum_albumin_n49.pcml",
+        # ── PCML temporarily removed ──────────────────────────────────────
+        # "Hemoglobin Beta · PCML (spectra + features + sequence)": "hemoglobin_beta.pcml",
+        # "Insulin B Chain · PCML (spectra + features + sequence)": "insulin_b_chain.pcml",
+        # "Serum Albumin N49 · PCML (spectra + features + sequence)": "serum_albumin_n49.pcml",
         # ── mzML + auto-loaded features CSV ───────────────────────────────
         "Hemoglobin Beta · mzML (3 scans, 3 features)": "hemoglobin_beta.mzML",
         "Hemoglobin Alpha · mzML (3 scans, 3 features)": "hemoglobin_alpha.mzML",
