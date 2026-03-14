@@ -347,7 +347,8 @@ with tab_seq:
         st.caption(f"Sequence coverage: {n_cov}/{len(pf.sequence)} aa ({pct:.1f}%)")
 
     fig_seq = create_sequence_plot(pf, ions, show_cleavage=show_cleavage)
-    st.plotly_chart(fig_seq, use_container_width=True)
+    _seq_key = f"seq_plot_{pf.sequence[:8] if pf.sequence else 'empty'}_{len(ions)}_{show_cleavage}"
+    st.plotly_chart(fig_seq, use_container_width=True, key=_seq_key)
 
 with tab_mirror:
     col_a, col_b = st.columns(2)
