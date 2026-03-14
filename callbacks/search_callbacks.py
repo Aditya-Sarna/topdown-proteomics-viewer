@@ -75,11 +75,19 @@ def register_callbacks(app):
             mods_str = '; '.join(
                 f"{m.name}@{m.position}" for m in pf.modifications
             ) or '—'
+            # Format e-value in scientific notation
+            ev = r.e_value
+            if ev < 0.001:
+                ev_str = f'{ev:.2e}'
+            else:
+                ev_str = f'{ev:.4f}'
             table_rows.append({
                 'rank':     rank,
                 'sequence': pf.sequence[:30] + ('…' if len(pf.sequence) > 30 else ''),
                 'range':    f"{pf.start_pos}–{pf.end_pos}",
                 'score':    f"{pf.score:.2f}",
+                'e_value':  ev_str,
+                'q_value':  f"{r.q_value:.4f}",
                 'matched':  f"{pf.matched_ions}/{pf.total_ions}",
                 'coverage': f"{r.sequence_coverage:.1f}",
                 'th_mass':  f"{pf.theoretical_mass:.4f}",
@@ -96,8 +104,17 @@ def register_callbacks(app):
 
         # Top hit summary (sidebar)
         pf0 = top.proteoform
+        ev0 = top.e_value
+        ev0_str = f'{ev0:.2e}' if ev0 < 0.001 else f'{ev0:.4f}'
+        qv_color = '#66BB6A' if top.q_value < 0.01 else ('#FFD54F' if top.q_value < 0.05 else '#EF5350')
         top_text = html.Div([
             html.Div(f"Score: {pf0.score:.2f}",           className='mb-1'),
+            html.Div(f"E-value: {ev0_str}",
+                     className='mb-1',
+                     style={'color': '#66BB6A' if ev0 < 0.01 else '#FFD54F' if ev0 < 0.1 else '#EF5350'}),
+            html.Div(f"q-value (FDR): {top.q_value:.4f}",
+                     className='mb-1',
+                     style={'color': qv_color}),
             html.Div(f"Proteoform: {pf0.start_pos}–{pf0.end_pos}",  className='mb-1'),
             html.Div(f"Ions matched: {pf0.matched_ions}/{pf0.total_ions}", className='mb-1'),
             html.Div(f"Coverage: {top.sequence_coverage:.1f}%",      className='mb-1'),

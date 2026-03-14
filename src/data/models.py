@@ -184,6 +184,9 @@ class SearchResult:
     matched_c: int = 0
     matched_z: int = 0
     sequence_coverage: float = 0.0
+    e_value: float = 1.0
+    q_value: float = 1.0
+    is_decoy: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -194,6 +197,9 @@ class SearchResult:
             'matched_c': self.matched_c,
             'matched_z': self.matched_z,
             'sequence_coverage': self.sequence_coverage,
+            'e_value': self.e_value,
+            'q_value': self.q_value,
+            'is_decoy': self.is_decoy,
         }
 
     @staticmethod
@@ -206,4 +212,7 @@ class SearchResult:
             matched_c=d.get('matched_c', 0),
             matched_z=d.get('matched_z', 0),
             sequence_coverage=d.get('sequence_coverage', 0.0),
+            e_value=d.get('e_value', 1.0),
+            q_value=d.get('q_value', 1.0),
+            is_decoy=d.get('is_decoy', False),
         )
