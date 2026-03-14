@@ -12,6 +12,26 @@ from src.analysis.proteoform_search import run_targeted_search, run_database_sea
 from src.analysis.deconvolution import deconvolute_spectrum
 from src.data.amino_acids import AA_MASSES
 
+_PROTON = 1.007276
+
+
+def _build_ion_row(ion):
+    """Convert a FragmentIon to a table row matching the reference column layout."""
+    obs_mass = (
+        ion.observed_mz * ion.charge - ion.charge * _PROTON
+        if (ion.matched and ion.charge > 0) else 0.0
+    )
+    return {
+        'name':     ion.label(),
+        'ion_type': ion.ion_type,
+        'ion_num':  ion.position,
+        'th_mass':  f"{ion.mass:.4f}",
+        'obs_mass': f"{obs_mass:.4f}" if ion.matched else '—',
+        'da_err':   f"{ion.mass_error_da:+.4f}" if ion.matched else '—',
+        'ppm_err':  f"{ion.mass_error_ppm:+.2f}" if ion.matched else '—',
+        'matched':  '1' if ion.matched else '0',  # hidden; used for conditional styling
+    }
+
 
 def register_callbacks(app):
 
@@ -171,17 +191,10 @@ def register_callbacks(app):
         ])
 
         # Ion rows for the top hit (auto-populated without requiring a row click)
-        top_ion_rows = []
-        for ion in sorted(top.fragment_ions, key=lambda x: (x.ion_type, x.position)):
-            top_ion_rows.append({
-                'ion':     ion.label(),
-                'th_mz':  f"{ion.mz:.4f}",
-                'obs_mz': f"{ion.observed_mz:.4f}" if ion.matched else '—',
-                'ppm':    f"{ion.mass_error_ppm:+.2f}" if ion.matched else '—',
-                'charge': str(ion.charge),
-                'matched': '✓' if ion.matched else '✗',
-                'seq':     ion.sequence[:15] if ion.sequence else '',
-            })
+        top_ion_rows = [
+            _build_ion_row(ion)
+            for ion in sorted(top.fragment_ions, key=lambda x: (x.ion_type, x.position))
+        ]
 
         return results_store, ions_data, table_rows, top_ion_rows, summary, f'✓ {n} hits', top_text
 
@@ -208,17 +221,10 @@ def register_callbacks(app):
         ions_data = [ion.to_dict() for ion in sr.fragment_ions]
 
         # Ion table
-        ion_rows = []
-        for ion in sorted(sr.fragment_ions, key=lambda x: (x.ion_type, x.position)):
-            ion_rows.append({
-                'ion':     ion.label(),
-                'th_mz':  f"{ion.mz:.4f}",
-                'obs_mz': f"{ion.observed_mz:.4f}" if ion.matched else '—',
-                'ppm':    f"{ion.mass_error_ppm:+.2f}" if ion.matched else '—',
-                'charge': str(ion.charge),
-                'matched': '✓' if ion.matched else '✗',
-                'seq':     ion.sequence[:15] if ion.sequence else '',
-            })
+        ion_rows = [
+            _build_ion_row(ion)
+            for ion in sorted(sr.fragment_ions, key=lambda x: (x.ion_type, x.position))
+        ]
 
         return pf.to_dict(), ions_data, ion_rows
 
@@ -283,3 +289,49 @@ def register_callbacks(app):
 
         internal = calc_internal_ions(seq, obs_mz, tolerance_ppm=20.0)
         return create_internal_fragment_map(seq, internal)
+
+    # ── Fragment stats header (above ion table) ─────────────────────────────
+    @app.callback(
+        Output('fragment-stats-header', 'children'),
+        Input('store-selected-result', 'data'),
+        Input('store-search-results',  'data'),
+    )
+    def update_fragment_stats(selected_result, results_data):
+        import dash_bootstrap_components as dbc
+
+        matched  = 0
+        coverage = 0.0
+
+        if selected_result:
+            from src.data.models import Proteoform
+            pf = Proteoform.from_dict(selected_result)
+            matched = pf.matched_ions
+            # find matching SearchResult for coverage
+            if results_data:
+                for r in results_data:
+                    sr = SearchResult.from_dict(r)
+                    if sr.proteoform.sequence == pf.sequence:
+                        coverage = sr.sequence_coverage
+                        break
+        elif results_data:
+            sr       = SearchResult.from_dict(results_data[0])
+            matched  = sr.proteoform.matched_ions
+            coverage = sr.sequence_coverage
+
+        if matched == 0 and not results_data:
+            return html.Small('Run search to see fragment matches.',
+                               className='text-muted')
+
+        return dbc.Row([
+            dbc.Col(
+                html.Span(f"Matching fragments (# {matched})",
+                          style={'fontWeight': '600', 'fontSize': '0.82rem',
+                                 'color': '#111111'}),
+                width='auto',
+            ),
+            dbc.Col(
+                html.Span(f"% Residue cleavage: {coverage:.3f}%",
+                          style={'fontSize': '0.82rem', 'color': '#555555'}),
+                width='auto', className='ms-auto',
+            ),
+        ], className='align-items-center mb-1')

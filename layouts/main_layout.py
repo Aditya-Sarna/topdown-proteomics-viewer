@@ -366,6 +366,14 @@ def _tab_spectrum():
 def _tab_sequence():
     return dbc.Tab(label='Sequence', tab_id='tab-sequence',
                    children=dbc.Card(dbc.CardBody([
+                       # Proteoform mass summary header
+                       html.Div(id='sequence-mass-header',
+                                className='mb-2 p-2',
+                                style={'background': '#f0f4ff',
+                                       'borderRadius': '4px',
+                                       'fontSize': '0.82rem',
+                                       'color': '#333333',
+                                       'borderLeft': '3px solid #1a73e8'}),
                        dbc.Row([
                            dbc.Col(dbc.Switch(id='show-cleavage', value=True,
                                               label='Show cleavage ticks'), width='auto'),
@@ -373,7 +381,20 @@ def _tab_sequence():
                                             style={'fontSize': '0.82rem', 'color': '#333333'}),
                                    width='auto'),
                        ], className='mb-2 align-items-center'),
-                       dcc.Graph(id='sequence-graph', config={'displayModeBar': False},
+                       dcc.Graph(id='sequence-graph',
+                                 config={
+                                     'displayModeBar': True,
+                                     'modeBarButtonsToRemove': [
+                                         'zoom2d', 'pan2d', 'select2d', 'lasso2d',
+                                         'zoomIn2d', 'zoomOut2d', 'autoScale2d',
+                                         'resetScale2d', 'toggleSpikelines',
+                                         'hoverClosestCartesian', 'hoverCompareCartesian',
+                                     ],
+                                     'toImageButtonOptions': {
+                                         'format': 'svg',
+                                         'filename': 'sequence_coverage',
+                                     },
+                                 },
                                  style={'minHeight': '300px'}),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
@@ -548,18 +569,17 @@ def _tab_search():
                            filter_action='native',
                        ),
                        html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6("Selected Proteoform — Ion Table",
-                               className='text-muted small mb-1'),
+                       html.Div(id='fragment-stats-header', className='mb-1'),
                        dash_table.DataTable(
                            id='ion-table',
                            columns=[
-                               {'name': 'Ion',       'id': 'ion'},
-                               {'name': 'Th. m/z',   'id': 'th_mz'},
-                               {'name': 'Obs. m/z',  'id': 'obs_mz'},
-                               {'name': 'Δ (ppm)',   'id': 'ppm'},
-                               {'name': 'Charge',    'id': 'charge'},
-                               {'name': 'Matched',   'id': 'matched'},
-                               {'name': 'Sequence',  'id': 'seq'},
+                               {'name': 'Name',           'id': 'name'},
+                               {'name': 'Ion type',       'id': 'ion_type'},
+                               {'name': 'Ion number',     'id': 'ion_num'},
+                               {'name': 'Th. mass (Da)',  'id': 'th_mass'},
+                               {'name': 'Obs. mass (Da)', 'id': 'obs_mass'},
+                               {'name': 'Δ mass (Da)',    'id': 'da_err'},
+                               {'name': 'Δ mass (ppm)',   'id': 'ppm_err'},
                            ],
                            data=[],
                            page_size=12,
@@ -579,7 +599,7 @@ def _tab_search():
                                'fontSize': '0.73rem',
                            },
                            style_data_conditional=[
-                               {'if': {'filter_query': '{matched} eq "✓"'},
+                               {'if': {'filter_query': '{matched} eq "1"'},
                                 'color': '#2e7d32'},
                            ],
                            sort_action='native',

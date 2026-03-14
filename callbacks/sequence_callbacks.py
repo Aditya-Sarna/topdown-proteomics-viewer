@@ -1,7 +1,7 @@
 """
 Sequence tab callback — updates the proteoform coverage viewer.
 """
-from dash import Input, Output, State
+from dash import Input, Output, State, html
 
 from src.data.models import Proteoform, FragmentIon
 from src.viz.sequence_plots import create_sequence_plot
@@ -14,6 +14,7 @@ def register_callbacks(app):
     @app.callback(
         Output('sequence-graph', 'figure'),
         Output('coverage-display', 'children'),
+        Output('sequence-mass-header', 'children'),
         Input('store-selected-result', 'data'),
         Input('store-protein', 'data'),
         Input('show-cleavage', 'value'),
@@ -47,4 +48,23 @@ def register_callbacks(app):
         else:
             cov_text = ''
 
-        return fig, cov_text
+        # Sequence-view mass header
+        if pf.sequence and (pf.theoretical_mass or pf.observed_mass):
+            delta_da  = pf.observed_mass - pf.theoretical_mass if pf.theoretical_mass else 0.0
+            name_part = pf.protein_name or 'Proteoform'
+            mass_header = html.Span([
+                html.Strong(f"{name_part}"),
+                html.Span("  |  ", style={'color': '#aaaaaa'}),
+                html.Span(f"Theoretical mass : {pf.theoretical_mass:.2f} Da",
+                          style={'marginRight': '16px'}),
+                html.Span(f"Observed mass : {pf.observed_mass:.2f} Da",
+                          style={'marginRight': '16px'}),
+                html.Span(
+                    f"\u0394 Mass (Da) : {delta_da:+.2f}",
+                    style={'color': '#EF5350' if abs(pf.mass_error_ppm) > 5 else '#2e7d32'},
+                ),
+            ])
+        else:
+            mass_header = ''
+
+        return fig, cov_text, mass_header
