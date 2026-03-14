@@ -211,3 +211,81 @@ def create_sequence_plot(proteoform: Proteoform,
         margin=dict(l=50, r=20, t=80, b=20),
     )
     return fig
+
+
+def create_internal_fragment_map(
+        sequence: str,
+        internal_ions,
+) -> go.Figure:
+    """
+    2-D dot map of internal fragment ions.
+    x = N-terminal cleavage start position (1-based)
+    y = C-terminal end position (1-based)
+    Green dot = matched, grey dot = unmatched.
+    """
+    fig = go.Figure()
+    if not sequence or not internal_ions:
+        fig.update_layout(
+            title='Run search and select a result to view internal fragment map',
+            template='plotly_white',
+            paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+            font=dict(color='#aaaaaa'),
+            height=420,
+        )
+        return fig
+
+    xs_m, ys_m, hov_m = [], [], []  # matched
+    xs_u, ys_u, hov_u = [], [], []  # unmatched
+
+    for (i, j, mz_th, matched, obs_mz, ppm) in internal_ions:
+        seq_frag = sequence[i:j]
+        label    = f'{seq_frag} [{i+1}–{j}]<br>Th: {mz_th:.4f}<br>'
+        if matched:
+            label += f'Obs: {obs_mz:.4f}<br>Δ: {ppm:.1f} ppm'
+            xs_m.append(i + 1)
+            ys_m.append(j)
+            hov_m.append(label)
+        else:
+            label += 'Not matched'
+            xs_u.append(i + 1)
+            ys_u.append(j)
+            hov_u.append(label)
+
+    if xs_u:
+        fig.add_trace(go.Scatter(
+            x=xs_u, y=ys_u, mode='markers',
+            marker=dict(size=6, color='#cccccc', opacity=0.5),
+            hovertext=hov_u, hoverinfo='text',
+            name='Unmatched',
+        ))
+    if xs_m:
+        fig.add_trace(go.Scatter(
+            x=xs_m, y=ys_m, mode='markers',
+            marker=dict(size=9, color='#4CAF50',
+                        line=dict(color='#2e7d32', width=1)),
+            hovertext=hov_m, hoverinfo='text',
+            name='Matched',
+        ))
+
+    n = len(sequence)
+    n_matched = len(xs_m)
+    n_total   = len(xs_m) + len(xs_u)
+    fig.update_layout(
+        template='plotly_white',
+        title=dict(
+            text=(f'Internal Fragment Map — {n_matched}/{n_total} matched '
+                  f'({100*n_matched/n_total:.0f}%)' if n_total else 'Internal Fragment Map'),
+            font=dict(size=12),
+        ),
+        xaxis=dict(title='N-terminal start position', range=[0, n + 1],
+                   showgrid=True, gridcolor='rgba(0,0,0,0.06)'),
+        yaxis=dict(title='C-terminal end position',   range=[0, n + 1],
+                   showgrid=True, gridcolor='rgba(0,0,0,0.06)'),
+        paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+        font=dict(color='#111111'),
+        legend=dict(orientation='h', yanchor='bottom', y=1.01, x=0,
+                    font=dict(size=11)),
+        margin=dict(l=60, r=20, t=70, b=50),
+        height=420,
+    )
+    return fig

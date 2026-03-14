@@ -190,3 +190,60 @@ def create_intensity_trace(features: List[Feature],
         margin=dict(l=60, r=20, t=60, b=40),
     )
     return fig
+
+
+def create_feature_3d_plot(features: List[Feature]) -> go.Figure:
+    """
+    3-D scatter: Retention Time (x) × Charge (y) × log₁₀(Intensity) (z).
+    Each proteoform identity gets its own colour.
+    """
+    fig = go.Figure()
+    if not features:
+        fig.update_layout(
+            title='No features loaded',
+            paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+            font=dict(color='#111111'),
+            height=520,
+        )
+        return fig
+
+    palette = px.colors.qualitative.Plotly
+    prot_ids = sorted(set(f.proteoform_id or 'Unknown' for f in features))
+
+    for gi, prot in enumerate(prot_ids):
+        sub = [f for f in features if (f.proteoform_id or 'Unknown') == prot]
+        col = palette[gi % len(palette)]
+        fig.add_trace(go.Scatter3d(
+            x=[f.rt_apex        for f in sub],
+            y=[f.charge         for f in sub],
+            z=[np.log10(max(f.intensity, 1)) for f in sub],
+            mode='markers',
+            marker=dict(size=5, color=col, opacity=0.85,
+                        line=dict(color='rgba(0,0,0,0.2)', width=0.5)),
+            name=str(prot),
+            customdata=[[f.feature_id, f.monoisotopic_mass, f.intensity] for f in sub],
+            hovertemplate=(
+                '<b>%{customdata[0]}</b><br>'
+                'RT: %{x:.2f} min<br>'
+                'Charge: %{y}<br>'
+                'log₁₀(I): %{z:.2f}<extra></extra>'
+            ),
+        ))
+
+    fig.update_layout(
+        title='Feature 3D Plot — RT × Charge × Intensity',
+        scene=dict(
+            xaxis=dict(title='RT (min)', backgroundcolor='#f8f8f8',
+                       gridcolor='#cccccc', showbackground=True),
+            yaxis=dict(title='Charge', backgroundcolor='#f8f8f8',
+                       gridcolor='#cccccc', showbackground=True),
+            zaxis=dict(title='log₁₀(I)', backgroundcolor='#f8f8f8',
+                       gridcolor='#cccccc', showbackground=True),
+        ),
+        paper_bgcolor=DARK_BG,
+        font=dict(color='#111111'),
+        height=520,
+        legend=dict(font=dict(size=10)),
+        margin=dict(l=0, r=0, t=50, b=0),
+    )
+    return fig

@@ -161,3 +161,54 @@ def calc_ions(sequence: str,
                     sequence=frag_seq,
                 ))
     return ions
+
+
+# ---------------------------------------------------------------------------
+# Internal fragment ions (b-type, singly charged, two backbone cleavages)
+# ---------------------------------------------------------------------------
+
+def calc_internal_ions(
+        sequence: str,
+        obs_mz,
+        tolerance_ppm: float = 20.0,
+        max_frag_length: int = 15,
+):
+    """
+    Compute b-type internal fragment ions and match them against an observed
+    spectrum (obs_mz, already sorted).
+
+    Returns a list of tuples:
+        (start_0idx, end_0idx_exclusive, mz_theoretical, matched,
+         observed_mz, ppm_error)
+
+    Only internal fragments (excluding N- and C-terminal residues) of length
+    2..max_frag_length are considered.
+    """
+    import numpy as np
+
+    n = len(sequence)
+    results = []
+
+    for i in range(1, n - 1):                       # N-terminal cleavage: after residue i
+        cum = 0.0
+        for j in range(i, min(i + max_frag_length, n - 1)):  # C-terminal cleavage: before residue j+1
+            cum += AA_MASSES.get(sequence[j], 0.0)
+            frag_len = j - i + 1
+            if frag_len < 2:
+                continue
+            mz_th = cum + PROTON        # b-type singly charged: no water added
+
+            matched    = False
+            obs_mz_val = 0.0
+            ppm_err    = 0.0
+            if len(obs_mz) > 0:
+                diffs  = np.abs((obs_mz - mz_th) / mz_th * 1e6)
+                best   = int(diffs.argmin())
+                if diffs[best] < tolerance_ppm:
+                    matched    = True
+                    obs_mz_val = float(obs_mz[best])
+                    ppm_err    = float(diffs[best])
+
+            results.append((i, j + 1, mz_th, matched, obs_mz_val, ppm_err))
+
+    return results

@@ -356,6 +356,10 @@ def _tab_spectrum():
                        html.Hr(style={'borderColor': '#dddddd'}),
                        html.Div(id='peak-click-info',
                                 style={'fontSize': '0.78rem', 'color': TEXT_MUTED}),
+                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Deconvolved Spectrum', className='text-muted small mb-1'),
+                       dcc.Graph(id='deconv-spectrum-graph', config={'displayModeBar': True},
+                                 style={'height': '360px'}),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
 
@@ -442,6 +446,39 @@ def _tab_features():
                        ], className='mb-2'),
                        dcc.Graph(id='intensity-trace-graph', config={'displayModeBar': False},
                                  style={'height': '300px'}),
+                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Feature 3D Plot — RT × Charge × Intensity',
+                               className='text-muted small mt-2'),
+                       dcc.Graph(id='feature-3d-graph', config={'displayModeBar': True},
+                                 style={'height': '520px'}),
+                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+
+
+def _tab_heatmap():
+    return dbc.Tab(label='MS Heatmap', tab_id='tab-heatmap',
+                   children=dbc.Card(dbc.CardBody([
+                       dbc.Row([
+                           dbc.Col([
+                               _label('MS Level'),
+                               dbc.RadioItems(
+                                   id='heatmap-ms-level',
+                                   options=[
+                                       {'label': 'All', 'value': 0},
+                                       {'label': 'MS1', 'value': 1},
+                                       {'label': 'MS2', 'value': 2},
+                                   ],
+                                   value=2, inline=True, className='small',
+                               ),
+                           ], width='auto'),
+                       ], className='mb-2'),
+                       html.H6('Raw MS Heatmap', className='text-muted small'),
+                       dcc.Graph(id='raw-heatmap-graph', config={'displayModeBar': True},
+                                 style={'height': '450px'}),
+                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Deconvolved (Precursor Mass) Heatmap',
+                               className='text-muted small mt-2'),
+                       dcc.Graph(id='deconv-heatmap-graph', config={'displayModeBar': True},
+                                 style={'height': '450px'}),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
 
@@ -548,6 +585,14 @@ def _tab_search():
                            sort_action='native',
                            filter_action='native',
                        ),
+                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Score Distribution', className='text-muted small mb-1'),
+                       dcc.Graph(id='score-dist-graph', config={'displayModeBar': False},
+                                 style={'height': '220px'}),
+                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.H6('Internal Fragment Map', className='text-muted small mb-1'),
+                       dcc.Graph(id='internal-frag-graph', config={'displayModeBar': True},
+                                 style={'height': '420px'}),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
 
@@ -606,6 +651,7 @@ def create_layout():
     tabs = dbc.Tabs([
         _tab_spectrum(),
         _tab_sequence(),
+        _tab_heatmap(),
         _tab_mirror(),
         _tab_features(),
         _tab_search(),

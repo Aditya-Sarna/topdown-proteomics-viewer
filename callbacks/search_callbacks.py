@@ -221,3 +221,65 @@ def register_callbacks(app):
             })
 
         return pf.to_dict(), ions_data, ion_rows
+
+    # ── Score distribution (updates whenever search results change) ─────────
+    @app.callback(
+        Output('score-dist-graph', 'figure'),
+        Input('store-search-results', 'data'),
+    )
+    def update_score_dist(results_data):
+        import plotly.graph_objects as go
+        fig = go.Figure()
+        if not results_data:
+            fig.update_layout(title='Run search to see score distribution',
+                              template='plotly_white', paper_bgcolor='#ffffff',
+                              font=dict(color='#aaaaaa'), height=220,
+                              margin=dict(t=35, b=35, l=40, r=10))
+            return fig
+
+        from src.data.models import SearchResult
+        scores = [SearchResult.from_dict(r).proteoform.score for r in results_data]
+        fig.add_trace(go.Histogram(
+            x=scores, nbinsx=max(10, len(scores) // 2),
+            marker_color='#1a73e8', opacity=0.8, name='Target',
+        ))
+        fig.update_layout(
+            title='Score Distribution',
+            xaxis_title='Score', yaxis_title='Count',
+            template='plotly_white', paper_bgcolor='#ffffff',
+            font=dict(color='#111111'), height=220,
+            margin=dict(t=35, b=35, l=40, r=10),
+            bargap=0.05,
+        )
+        return fig
+
+    # ── Internal fragment map (updates on row selection or new search) ──────
+    @app.callback(
+        Output('internal-frag-graph', 'figure'),
+        Input('store-selected-result', 'data'),
+        Input('store-search-results',  'data'),
+        State('store-spectra',           'data'),
+        State('store-selected-scan-idx', 'data'),
+    )
+    def update_internal_frag_map(selected_result, results_data, spectra_data, scan_idx):
+        import plotly.graph_objects as go
+        from src.viz.sequence_plots import create_internal_fragment_map
+        from src.analysis.fragment_ions import calc_internal_ions
+        import numpy as np
+
+        # Determine which proteoform/spectrum to use
+        pf_data = selected_result
+        if not pf_data and results_data:
+            from src.data.models import SearchResult
+            pf_data = SearchResult.from_dict(results_data[0]).proteoform.to_dict()
+
+        if not pf_data or not pf_data.get('sequence') or not spectra_data:
+            return create_internal_fragment_map('', [])
+
+        seq      = pf_data['sequence']
+        idx      = scan_idx or 0
+        spectrum = Spectrum.from_dict(spectra_data[idx])
+        obs_mz   = np.sort(spectrum.mz_array)
+
+        internal = calc_internal_ions(seq, obs_mz, tolerance_ppm=20.0)
+        return create_internal_fragment_map(seq, internal)

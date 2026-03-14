@@ -5,7 +5,7 @@ matched-ions store changes.
 from dash import Input, Output, State, no_update
 
 from src.data.models import Spectrum, FragmentIon
-from src.viz.spectrum_plots import create_spectrum_plot
+from src.viz.spectrum_plots import create_spectrum_plot, create_deconvolved_spectrum_plot
 
 
 def register_callbacks(app):
@@ -33,3 +33,20 @@ def register_callbacks(app):
         ions = ([FragmentIon.from_dict(d) for d in ions_data]
                 if ions_data else None)
         return create_spectrum_plot(spectrum, ions)
+
+    @app.callback(
+        Output('deconv-spectrum-graph', 'figure'),
+        Input('store-selected-scan-idx', 'data'),
+        State('store-spectra', 'data'),
+    )
+    def update_deconv_spectrum(idx, spectra_data):
+        if not spectra_data:
+            import plotly.graph_objects as go
+            return go.Figure().update_layout(
+                title='Load a spectrum to see deconvolved view',
+                template='plotly_white', paper_bgcolor='#ffffff',
+                font=dict(color='#aaaaaa'), height=360,
+            )
+        idx      = idx or 0
+        spectrum = Spectrum.from_dict(spectra_data[idx])
+        return create_deconvolved_spectrum_plot(spectrum)

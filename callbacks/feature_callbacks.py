@@ -4,7 +4,7 @@ Feature map and intensity trace callbacks.
 from dash import Input, Output, State
 
 from src.data.models import Feature, Proteoform
-from src.viz.feature_plots import create_feature_map, create_intensity_trace
+from src.viz.feature_plots import create_feature_map, create_intensity_trace, create_feature_3d_plot
 
 
 def register_callbacks(app):
@@ -81,3 +81,12 @@ def register_callbacks(app):
             theoretical_mass=float(th_mass) if th_mass else 0.0,
             theoretical_charge=int(th_charge) if th_charge else 0,
         )
+
+    # 3-D feature scatter
+    @app.callback(
+        Output('feature-3d-graph', 'figure'),
+        Input('store-features', 'data'),
+    )
+    def update_feature_3d(feats_data):
+        features = [Feature.from_dict(d) for d in (feats_data or [])]
+        return create_feature_3d_plot(features)

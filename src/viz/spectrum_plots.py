@@ -162,3 +162,62 @@ def create_spectrum_plot(spectrum: Spectrum,
         margin=dict(l=50, r=20, t=80, b=50),
     )
     return fig
+
+
+def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
+    """
+    Plot the charge-deconvolved spectrum: intensity vs neutral monoisotopic mass.
+    Runs pyopenms Deisotoper when available; falls back to the original spectrum.
+    """
+    from ..analysis.deconvolution import deconvolute_spectrum
+
+    fig = go.Figure()
+    dr   = deconvolute_spectrum(spectrum)
+    spec = dr.spectrum
+    masses = spec.mz_array
+    ints   = spec.intensity_array
+
+    if len(masses) == 0:
+        fig.update_layout(title='No deconvolved peaks', template='plotly_white',
+                          paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG)
+        return fig
+
+    norm = ints / ints.max() * 100.0 if ints.max() > 0 else ints
+    xs, ys = _lines(masses, norm)
+    note   = 'OpenMS' if dr.used_openms else 'raw (pyopenms unavailable)'
+
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode='lines',
+        line=dict(color='#4CAF50', width=1.2),
+        name=f'Deconvolved ({note})',
+        hoverinfo='skip',
+    ))
+
+    # Annotate top 15 peaks by intensity
+    top_idx = np.argsort(norm)[-15:]
+    for i in top_idx:
+        fig.add_annotation(
+            x=masses[i], y=norm[i],
+            text=f'{masses[i]:.1f}',
+            showarrow=False, yshift=8,
+            font=dict(size=8, color='#388E3C'),
+        )
+
+    fig.update_layout(
+        template='plotly_white',
+        title=dict(
+            text=(f'Deconvolved Spectrum — {dr.n_original_peaks}→'
+                  f'{dr.n_deconvoluted_peaks} peaks ({note})'),
+            font=dict(size=12),
+        ),
+        xaxis=dict(title='Monoisotopic Mass (Da, z=1 equiv)', showgrid=True,
+                   gridcolor='rgba(0,0,0,0.08)'),
+        yaxis=dict(title='Rel. Intensity (%)', showgrid=True,
+                   gridcolor='rgba(0,0,0,0.08)', range=[-3, 115]),
+        paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
+        font=dict(color='#111111'),
+        showlegend=False,
+        margin=dict(l=50, r=20, t=60, b=50),
+        height=360,
+    )
+    return fig
