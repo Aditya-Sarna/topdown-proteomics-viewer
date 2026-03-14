@@ -71,7 +71,15 @@ def _load_demo_file(filename: str) -> tuple[list, list, dict, str]:
         return spectra, feats, pinfo, msg
     if fname.endswith(".mzml"):
         spectra = parse_mzml(raw, filename)
-        return spectra, [], {}, f"Loaded {len(spectra)} MS2 scan(s) from {filename}"
+        # Auto-load paired feature CSV if present (e.g. hemoglobin_beta_features.csv)
+        feats: list = []
+        base = filename.rsplit(".", 1)[0]
+        csv_path = os.path.join(_DEMO_DIR, base + "_features.csv")
+        if os.path.exists(csv_path):
+            with open(csv_path, "r", encoding="utf-8") as _cf:
+                feats = parse_feature_table(_cf.read(), base + "_features.csv")
+        n_feats = f" + {len(feats)} features" if feats else ""
+        return spectra, feats, {}, f"Loaded {len(spectra)} MS2 scan(s){n_feats} from {filename}"
     if fname.endswith((".csv", ".tsv", ".txt")):
         text = raw.decode("utf-8", errors="replace")
         spec = parse_csv_peaks(text, filename)
@@ -122,19 +130,28 @@ with st.sidebar:
 
     st.markdown("##### TEST DATASETS / FILES")
 
-    _demo_files = sorted(f for f in os.listdir(_DEMO_DIR) if not f.startswith("."))
+    # Hardcoded demo entries — label → filename in demo_data/
+    _DEMO_OPTIONS: dict[str, str | None] = {
+        "— select a dataset —": None,
+        "Hemoglobin Beta · PCML (spectra + features + sequence)": "hemoglobin_beta.pcml",
+        "Hemoglobin Beta · mzML + features CSV": "hemoglobin_beta.mzML",
+        "Insulin B Chain · PCML (spectra + features + sequence)": "insulin_b_chain.pcml",
+        "Insulin B Chain · mzML + features CSV": "insulin_b_chain.mzML",
+        "Serum Albumin N49 · PCML (spectra + features + sequence)": "serum_albumin_n49.pcml",
+        "Serum Albumin N49 · mzML + features CSV": "serum_albumin_n49.mzML",
+    }
     _selected_demo = st.selectbox(
         "Select dataset",
-        options=["— select a dataset —"] + _demo_files,
+        options=list(_DEMO_OPTIONS.keys()),
         key="demo_file_select",
         label_visibility="collapsed",
     )
     if st.button("Load", use_container_width=True, type="secondary"):
         _chosen = st.session_state.get("demo_file_select", "— select a dataset —")
-        if _chosen == "— select a dataset —":
+        if _DEMO_OPTIONS.get(_chosen) is None:
             st.warning("Please select a dataset first.")
         else:
-            _d_spectra, _d_feats, _d_pinfo, _d_msg = _load_demo_file(_chosen)
+            _d_spectra, _d_feats, _d_pinfo, _d_msg = _load_demo_file(_DEMO_OPTIONS[_chosen])
             if _d_spectra or _d_feats or _d_pinfo.get('sequence'):
                 if _d_spectra:
                     st.session_state.spectra = _d_spectra
@@ -169,47 +186,24 @@ with st.sidebar:
             st.error(_dm[1])
 
 
-    uploaded_spec = st.file_uploader(
-        "Upload Spectrum (.mzML / .pcml / peak CSV)",
-        type=["pcml", "mzml", "csv", "tsv", "txt"],
-        key="upload_spectrum",
-    )
-    if uploaded_spec:
-        spectra, feats, pinfo, msg = _load_spectrum_file(uploaded_spec)
-        if spectra or feats or pinfo.get('sequence'):
-            if spectra:
-                st.session_state.spectra = spectra
-                st.session_state.scan_idx = 0
-            if feats:
-                st.session_state.features = feats
-            if pinfo.get('sequence'):
-                clean = _clean_seq(pinfo['sequence'])
-                st.session_state['_prot_name'] = pinfo.get('name', '')
-                st.session_state['_prot_seq']  = clean
-                st.session_state.protein = {
-                    'name': pinfo.get('name', ''),
-                    'sequence': clean,
-                    'mass': calc_sequence_mass(clean),
-                }
-            st.session_state.search_results = []
-            st.session_state.matched_ions = []
-            st.session_state.selected_result = None
-            st.caption(msg)
-        else:
-            st.error(msg)
+    # File upload disabled — use the demo datasets above
+    # uploaded_spec = st.file_uploader(
+    #     "Upload Spectrum (.mzML / .pcml / peak CSV)",
+    #     type=["pcml", "mzml", "csv", "tsv", "txt"],
+    #     key="upload_spectrum",
+    # )
+    # if uploaded_spec:
+    #     spectra, feats, pinfo, msg = _load_spectrum_file(uploaded_spec)
+    #     ...
 
-    uploaded_feats = st.file_uploader(
-        "Upload Feature Table (.csv)",
-        type=["csv", "tsv", "txt"],
-        key="upload_features",
-    )
-    if uploaded_feats:
-        feats, msg = _load_features_file(uploaded_feats)
-        if feats:
-            st.session_state.features = feats
-            st.caption(msg)
-        else:
-            st.warning(msg)
+    # uploaded_feats = st.file_uploader(
+    #     "Upload Feature Table (.csv)",
+    #     type=["csv", "tsv", "txt"],
+    #     key="upload_features",
+    # )
+    # if uploaded_feats:
+    #     feats, msg = _load_features_file(uploaded_feats)
+    #     ...
 
     st.divider()
 

@@ -1,0 +1,3 @@
+feature_id,mz_apex,rt_apex,rt_start,rt_end,mz_start,mz_end,intensity,charge,monoisotopic_mass,sequence,proteoform_id
+F1,1141.38061,42.1,41.4,42.8,1141.33,1141.43,2750000.0,5,5701.86666,,
+F2,951.31839,42.1,41.4,42.8,951.27,951.37,1430000.0,6,5701.86666,,
