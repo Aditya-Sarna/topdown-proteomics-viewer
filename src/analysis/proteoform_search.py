@@ -330,8 +330,25 @@ def run_targeted_search(spectrum: Spectrum,
 # Database search  (multi-protein FASTA mode)
 # ---------------------------------------------------------------------------
 
-_DB_SEARCH_MAX_PROTEINS  = 500   # hard cap per run
+_DB_SEARCH_MAX_PROTEINS  = 2000  # hard cap per run (mass-filtered first)
 _DB_SEARCH_MAX_CANDS_PER = 30    # candidates per protein (speed vs recall)
+_DB_MASS_TOL_DA          = 3.0   # pre-filter window (Da) around precursor mass
+
+
+def _passes_mass_filter(seq: str, obs_mass: float, tol_da: float) -> bool:
+    """Quick mass check: does the full-length sequence mass lie within tol_da of obs_mass?
+
+    Uses a fast residue sum (no Modification objects).  The window is wide
+    enough to still include truncated forms — the per-aa mass range is used
+    to widen the window by (max_trunc residues × heaviest_aa mass).
+    """
+    if obs_mass <= 0:
+        return True   # no precursor info — don't filter
+    full_mass = sum(_AA_MASSES.get(c, 0.0) for c in seq) + 18.01056  # +water
+    # allow truncations: up to 4 residues removed can shift mass by ~600 Da
+    # allow mods: common mods shift by < 160 Da
+    margin = tol_da + 4 * 186.08 + 160.0   # ~1$10 Da generous window
+    return abs(full_mass - obs_mass) <= margin
 
 
 def run_database_search(
@@ -347,10 +364,12 @@ def run_database_search(
 
     Strategy
     --------
-    For each protein: generate full-length + truncation candidates (no
-    variable mods — speed), plus the equivalent reversed-sequence decoys.
-    E-values and q-values are computed globally across *all* proteins so
-    that the FDR estimate reflects the full competition.
+    1. Pre-filter proteins by precursor mass (±_DB_MASS_TOL_DA + truncation
+       margin) so only plausible proteins are scored.
+    2. For each surviving protein: generate full-length + truncation
+       candidates (no variable mods — speed) plus reversed-sequence decoys.
+    3. E-values and q-values are computed globally across *all* proteins so
+       that the FDR estimate reflects the full competition space.
 
     Returns
     -------
@@ -373,6 +392,10 @@ def run_database_search(
     for prot_name, prot_seq in proteins[:_DB_SEARCH_MAX_PROTEINS]:
         seq = ''.join(c for c in prot_seq.upper() if c in _VALID_AA)
         if len(seq) < 5:
+            continue
+
+        # ── Precursor mass pre-filter ──────────────────────────────────────
+        if not _passes_mass_filter(seq, obs_mass, _DB_MASS_TOL_DA):
             continue
 
         base = [(seq, 1, len(seq))]

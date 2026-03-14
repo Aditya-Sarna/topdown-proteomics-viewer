@@ -18,6 +18,17 @@ def match_peaks(theoretical_ions: List[FragmentIon],
     obs_sorted = np.sort(np.asarray(spectrum.mz_array, dtype=np.float64))
     n_obs = len(obs_sorted)
 
+    # Empty spectrum — return all ions as unmatched
+    if n_obs == 0:
+        return [
+            FragmentIon(
+                ion_type=ion.ion_type, position=ion.position,
+                charge=ion.charge, mz=ion.mz, mass=ion.mass,
+                sequence=ion.sequence, matched=False,
+            )
+            for ion in theoretical_ions
+        ]
+
     th_mzs = np.array([ion.mz for ion in theoretical_ions], dtype=np.float64)
     tols   = th_mzs * tolerance_ppm / 1e6
 

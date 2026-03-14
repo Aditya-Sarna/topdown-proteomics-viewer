@@ -14,45 +14,129 @@ NH3    = 17.02655
 CO     = 27.99491
 
 # Common PTMs: name -> monoisotopic mass shift (Da)
+# Sources: Unimod (unimod.org), PSI-MOD, common top-down proteomics mods
 PTM_DATABASE = {
+    # Phosphorylation & signalling
     'Phosphorylation':           79.96633,
+    'Sulfation':                 79.95681,
+
+    # Acetylation & acylation
     'Acetylation':               42.01057,
+    'N-term Acetylation':        42.01057,
+    'Propionylation':            56.02621,
+    'Butyrylation':              70.04186,
+    'Crotonylation':             68.02621,
+    'Succinylation':            100.01604,
+    'Malonylation':              86.00039,
+    'Glutarylation':            114.03169,
+    'Formylation':               27.99491,
+    '2-Hydroxyisobutyrylation':  86.03678,
+    'Benzoylation':             104.02621,
+
+    # Methylation
     'Methylation':               14.01565,
     'Dimethylation':             28.03130,
     'Trimethylation':            42.04695,
+    'Monomethyl ester':          14.01565,
+
+    # Ubiquitin / UBL modifications
     'Ubiquitination (GlyGly)':  114.04293,
+    'SUMO-1 (Qqtgg)':           396.23429,
+    'ISG15 (LRGG)':             340.18558,
+
+    # Oxidation & reduction
     'Oxidation':                 15.99491,
-    'Deamidation':                0.98402,
+    'Dioxidation':               31.98983,
     'Carbamidomethylation':      57.02146,
-    'Formylation':               27.99491,
-    'Hydroxylation':             15.99491,
-    'N-term Acetylation':        42.01057,
+    'Propionamide':              71.03711,
+
+    # Deamidation & hydrolysis
+    'Deamidation':                0.98402,
+    'Glutamine->pyro-Glu':      -17.02655,
+
+    # Pyro-glu (N-terminal)
     'Pyro-glu from Q':          -17.02655,
     'Pyro-glu from E':          -18.01056,
-    'Succinylation':            100.01604,
-    'Malonylation':              86.00039,
-    'Crotonylation':             68.02621,
+    'Pyro-carbamidomethyl':     -17.02655,
+
+    # Hydroxylation
+    'Hydroxylation':             15.99491,
+    'Dihydroxylation':           31.98983,
+
+    # Glycosylation
+    'HexNAc (O-GlcNAc)':       203.07937,
+    'Hex (O-Mannose)':          162.05282,
+    'dHex (Fucose)':            146.05791,
+    'NeuAc (Sialic acid)':      291.09542,
+    'HexNAc+Hex':               365.13219,
+    'HexNAc2':                  406.15874,
+    'Core1 O-glycan (HexNAc+Hex)': 365.13219,
+
+    # Lipid / GPI
+    'Myristoylation':           210.19837,
+    'Palmitoylation':           238.22967,
+
+    # Disulfide / Carbamidomethylation variants
+    'Dehydration':              -18.01056,
+
+    # Nitrosylation & other reactive-oxygen
     'Nitrosylation':             28.98983,
-    'Sulfation':                 79.95681,
+    'Nitration':                 44.98508,
+
+    # Carbamylation
+    'Carbamylation':             43.00581,
+
+    # DiGly remnant / crosslink
+    'Diglycine':                114.04293,
 }
 
 # PTM preferred target residues
 PTM_TARGET_RESIDUES = {
     'Phosphorylation':          'STY',
+    'Sulfation':                'Y',
     'Acetylation':              'K',
+    'N-term Acetylation':       '',   # N-terminus
+    'Propionylation':           'K',
+    'Butyrylation':             'K',
+    'Crotonylation':            'K',
+    'Succinylation':            'K',
+    'Malonylation':             'K',
+    'Glutarylation':            'K',
+    'Formylation':              'K',
+    '2-Hydroxyisobutyrylation': 'K',
+    'Benzoylation':             'K',
     'Methylation':              'KR',
     'Dimethylation':            'KR',
     'Trimethylation':           'K',
+    'Monomethyl ester':         'DE',
     'Ubiquitination (GlyGly)':  'K',
-    'Oxidation':                'M',
-    'Deamidation':              'NQ',
+    'SUMO-1 (Qqtgg)':           'K',
+    'ISG15 (LRGG)':             'K',
+    'Oxidation':                'MW',
+    'Dioxidation':              'MW',
     'Carbamidomethylation':     'C',
-    'Formylation':              'K',
+    'Propionamide':             'C',
+    'Deamidation':              'NQ',
+    'Glutamine->pyro-Glu':      'Q',
+    'Pyro-glu from Q':          'Q',
+    'Pyro-glu from E':          'E',
+    'Pyro-carbamidomethyl':     'C',
     'Hydroxylation':            'P',
-    'N-term Acetylation':       '',   # N-terminus
-    'Succinylation':            'K',
-    'Malonylation':             'K',
-    'Crotonylation':            'K',
+    'Dihydroxylation':          'WF',
+    'HexNAc (O-GlcNAc)':       'ST',
+    'Hex (O-Mannose)':          'ST',
+    'dHex (Fucose)':            'ST',
+    'NeuAc (Sialic acid)':      'ST',
+    'HexNAc+Hex':               'ST',
+    'HexNAc2':                  'ST',
+    'Core1 O-glycan (HexNAc+Hex)': 'ST',
+    'Myristoylation':           'G',
+    'Palmitoylation':           'C',
+    'Dehydration':              'ST',
+    'Nitrosylation':            'C',
+    'Nitration':                'Y',
+    'Carbamylation':            'K',
+    'Diglycine':                'K',
 }
 
 THREE_TO_ONE = {

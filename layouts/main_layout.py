@@ -572,14 +572,14 @@ def _export_modal():
 
 def _stores():
     return html.Div([
-        dcc.Store(id='store-spectra',            storage_type='memory', data=[]),
-        dcc.Store(id='store-selected-scan-idx',  storage_type='memory', data=0),
-        dcc.Store(id='store-features',           storage_type='memory', data=[]),
-        dcc.Store(id='store-protein',            storage_type='memory', data={}),
-        dcc.Store(id='store-fasta-proteins',     storage_type='memory', data=[]),
-        dcc.Store(id='store-search-results',     storage_type='memory', data=[]),
-        dcc.Store(id='store-matched-ions',       storage_type='memory', data=[]),
-        dcc.Store(id='store-selected-result',    storage_type='memory', data={}),
+        dcc.Store(id='store-spectra',            storage_type='session', data=[]),
+        dcc.Store(id='store-selected-scan-idx',  storage_type='session', data=0),
+        dcc.Store(id='store-features',           storage_type='session', data=[]),
+        dcc.Store(id='store-protein',            storage_type='session', data={}),
+        dcc.Store(id='store-fasta-proteins',     storage_type='session', data=[]),
+        dcc.Store(id='store-search-results',     storage_type='session', data=[]),
+        dcc.Store(id='store-matched-ions',       storage_type='memory',  data=[]),
+        dcc.Store(id='store-selected-result',    storage_type='session', data={}),
         dcc.Download(id='download-data'),
     ])
 
