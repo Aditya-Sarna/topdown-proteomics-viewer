@@ -13,7 +13,8 @@ from dash import Input, Output, State, no_update
 
 from src.data.parsers import (decode_upload, generate_demo_spectrum,
                                generate_demo_features, UBIQUITIN, UBIQUITIN_MASS,
-                               parse_pcml, parse_mzml, parse_fasta)
+                               parse_pcml, parse_mzml, parse_fasta,
+                               get_demo_proteins)
 
 _DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
 
@@ -214,7 +215,21 @@ def register_callbacks(app):
             sugg_el = html_list(items)
         return diff_text, sugg_el
 
-    # ── FASTA upload → store-fasta-proteins ────────────────────────────────
+    # ── Load Demo DB button → store-fasta-proteins ───────────────────────
+    @app.callback(
+        Output('store-fasta-proteins', 'data',   allow_duplicate=True),
+        Output('upload-fasta-status',  'children', allow_duplicate=True),
+        Input('load-demo-db-btn', 'n_clicks'),
+        prevent_initial_call=True,
+    )
+    def load_demo_db(_):
+        proteins = get_demo_proteins()
+        data = [[name, seq] for name, seq in proteins]
+        names = ', '.join(p[0].split('|')[2].split('_')[0] if '|' in p[0] else p[0]
+                          for p in proteins)
+        return data, f'✓ {len(proteins)} proteins loaded: {names}'
+
+    # ── FASTA upload → store-fasta-proteins ───────────────────────────────
     @app.callback(
         Output('store-fasta-proteins', 'data'),
         Output('upload-fasta-status',  'children'),

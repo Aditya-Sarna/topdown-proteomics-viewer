@@ -194,7 +194,14 @@ def _sidebar():
             ]),
             # Database controls (hidden until mode == 'database')
             html.Div(id='database-protein-controls', style={'display': 'none'}, children=[
-                _label("Upload FASTA (.fasta / .fa / .txt)"),
+                dbc.Button(
+                    '⚡ Load Demo DB (Ubiquitin, HBB, BSA, HSA, Insulin)',
+                    id='load-demo-db-btn',
+                    color='success', outline=True, size='sm',
+                    className='w-100 mb-2',
+                    style={'fontSize': '0.72rem'},
+                ),
+                _label("— or upload your own FASTA —"),
                 dcc.Upload(
                     id='upload-fasta',
                     children=html.Div([
