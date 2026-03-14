@@ -54,9 +54,10 @@ def deconvolute_spectrum(
     n_orig = len(spectrum.mz_array)
 
     try:
-        import pyopenms
+        # import pyopenms  # temporarily disabled
+        raise ImportError("pyopenms disabled")
 
-        ms_spec = pyopenms.MSSpectrum()
+        ms_spec = pyopenms.MSSpectrum()  # noqa: F821 (unreachable)
         ms_spec.setMSLevel(2)
 
         # Load peaks

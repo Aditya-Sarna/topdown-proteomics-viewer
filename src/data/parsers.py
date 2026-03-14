@@ -73,17 +73,18 @@ def _parse_mzml_pyopenms(file_bytes: bytes, filename: str) -> List[Spectrum]:
 
 
 def parse_mzml(file_bytes: bytes, filename: str) -> List[Spectrum]:
-    """Parse an mzML file; uses pyopenms when available, falls back to pyteomics."""
-    try:
-        import pyopenms  # noqa: F401
-        result = _parse_mzml_pyopenms(file_bytes, filename)
-        if result:
-            return result
-        # pyopenms loaded but found 0 spectra — fall through to pyteomics
-    except ImportError:
-        pass  # pyopenms not installed — use pyteomics silently
-    except Exception as e:
-        print(f"[parse_mzml] pyopenms error on {filename}: {e} — falling back to pyteomics")
+    """Parse an mzML file; uses pyteomics (pyopenms temporarily disabled)."""
+    # pyopenms temporarily disabled — mzML files failed to parse with it
+    # try:
+    #     import pyopenms  # noqa: F401
+    #     result = _parse_mzml_pyopenms(file_bytes, filename)
+    #     if result:
+    #         return result
+    #     # pyopenms loaded but found 0 spectra — fall through to pyteomics
+    # except ImportError:
+    #     pass  # pyopenms not installed — use pyteomics silently
+    # except Exception as e:
+    #     print(f"[parse_mzml] pyopenms error on {filename}: {e} — falling back to pyteomics")
 
     try:
         from pyteomics import mzml
@@ -488,11 +489,12 @@ def decode_upload(contents: str, filename: str) -> Tuple[List[Spectrum], List[Fe
             return spectra, feats, msg, pinfo
         elif fn_lower.endswith('.mzml'):
             spectra = parse_mzml(decoded, filename)
-            try:
-                import pyopenms  # noqa: F401
-                parser_name = 'pyopenms'
-            except ImportError:
-                parser_name = 'pyteomics'
+            parser_name = 'pyteomics'  # pyopenms temporarily disabled
+            # try:
+            #     import pyopenms  # noqa: F401
+            #     parser_name = 'pyopenms'
+            # except ImportError:
+            #     parser_name = 'pyteomics'
             return spectra, [], f"Loaded {len(spectra)} MS2 spectra from {filename} (via {parser_name})", None
         elif fn_lower.endswith(('.csv', '.tsv', '.txt')):
             text = decoded.decode('utf-8', errors='replace')

@@ -13,17 +13,18 @@ def calc_sequence_mass(sequence: str,
     Monoisotopic neutral mass of a proteoform.
     Uses pyopenms.AASequence when available for higher accuracy.
     """
-    try:
-        import pyopenms
-        aa_seq = pyopenms.AASequence.fromString(sequence)
-        mass = aa_seq.getMonoWeight()   # already includes H2O terminal
-        mass += nterm_mod + cterm_mod
-        if modifications:
-            for mod in modifications:
-                mass += mod.mass_shift
-        return mass
-    except Exception:
-        pass  # fall back to manual calculation
+    # pyopenms temporarily disabled
+    # try:
+    #     import pyopenms
+    #     aa_seq = pyopenms.AASequence.fromString(sequence)
+    #     mass = aa_seq.getMonoWeight()   # already includes H2O terminal
+    #     mass += nterm_mod + cterm_mod
+    #     if modifications:
+    #         for mod in modifications:
+    #             mass += mod.mass_shift
+    #     return mass
+    # except Exception:
+    #     pass  # fall back to manual calculation
 
     mass = WATER + nterm_mod + cterm_mod
     for aa in sequence:

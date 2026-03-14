@@ -16,7 +16,8 @@ def _calc_ions_openms(sequence: str,
     Returns None if pyopenms is unavailable so the caller can fall back.
     """
     try:
-        import pyopenms
+        # import pyopenms  # temporarily disabled
+        raise ImportError("pyopenms disabled")
     except ImportError:
         return None
 
