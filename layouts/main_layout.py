@@ -8,7 +8,16 @@ import dash_bootstrap_components as dbc
 from src.data.amino_acids import PTM_DATABASE
 
 _DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
-_DEMO_FILES = sorted(f for f in os.listdir(_DEMO_DIR) if not f.startswith('.'))
+# Clean protein name → filename mapping for the navbar dropdown
+_DEMO_OPTIONS = [
+    {'label': 'Hemoglobin Beta',   'value': 'hemoglobin_beta.mzML'},
+    {'label': 'Hemoglobin Alpha',  'value': 'hemoglobin_alpha.mzML'},
+    {'label': 'Insulin B Chain',   'value': 'insulin_b_chain.mzML'},
+    {'label': 'Serum Albumin N49', 'value': 'serum_albumin_n49.mzML'},
+    {'label': 'Ubiquitin',         'value': 'ubiquitin.mzML'},
+    {'label': 'Cytochrome C',      'value': 'cytochrome_c.mzML'},
+    {'label': 'Thioredoxin',       'value': 'thioredoxin.mzML'},
+]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Colour constants
@@ -63,7 +72,7 @@ def _navbar():
                 dbc.Col(html.Div([
                     dcc.Dropdown(
                         id='demo-file-select',
-                        options=[{'label': f, 'value': f} for f in _DEMO_FILES],
+                        options=_DEMO_OPTIONS,
                         placeholder='Load Datasets…',
                         clearable=False,
                         style={'minWidth': '220px', 'fontSize': '0.8rem', 'display': 'inline-block'},
@@ -95,54 +104,16 @@ def _sidebar():
 
     return html.Div([
 
-        # ── Data Input ─────────────────────────────────────────────────────
-        _section("Data Input",
-            _label("Upload Spectrum (.mzML / .pcml / peak CSV)"),
-            dcc.Upload(
-                id='upload-spectrum',
-                children=html.Div(['Drag & drop or ', html.A('browse', style={'color': ACCENT}),
-                                   html.Span(' (.mzML, .pcml, .csv)', style={'color': TEXT_MUTED, 'fontSize': '0.70rem'})]),
-                style={
-                    'borderWidth': '1px', 'borderStyle': 'dashed',
-                    'borderRadius': '4px', 'borderColor': '#cccccc',
-                    'textAlign': 'center', 'padding': '8px 4px',
-                    'color': TEXT_MUTED, 'fontSize': '0.78rem', 'cursor': 'pointer',
-                    'background': '#fafafa',
-                },
-                multiple=False,
-            ),
-            dcc.Loading(
-                id='upload-spectrum-loading',
-                type='circle',
-                color='#2196F3',
-                children=html.Div(id='upload-spectrum-status',
-                                  className='mt-1',
-                                  style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
-            ),
-
-            html.Div(className='mt-2'),
-            _label("Upload Feature Table (.csv)"),
-            dcc.Upload(
-                id='upload-features',
-                children=html.Div(['Drag & drop or ', html.A('browse', style={'color': ACCENT})]),
-                style={
-                    'borderWidth': '1px', 'borderStyle': 'dashed',
-                    'borderRadius': '4px', 'borderColor': '#cccccc',
-                    'textAlign': 'center', 'padding': '8px 4px',
-                    'color': TEXT_MUTED, 'fontSize': '0.78rem', 'cursor': 'pointer',
-                    'background': '#fafafa',
-                },
-                multiple=False,
-            ),
-            dcc.Loading(
-                id='upload-features-loading',
-                type='circle',
-                color='#2196F3',
-                children=html.Div(id='upload-features-status',
-                                  className='mt-1',
-                                  style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
-            ),
-        ),
+        # ── Data Input (upload disabled — use navbar dropdown) ─────────────
+        # Hidden placeholder components required by callbacks
+        html.Div(style={'display': 'none'}, children=[
+            dcc.Upload(id='upload-spectrum', children=[], multiple=False),
+            html.Div(id='upload-spectrum-status'),
+            html.Div(id='upload-spectrum-loading'),
+            dcc.Upload(id='upload-features', children=[], multiple=False),
+            html.Div(id='upload-features-status'),
+            html.Div(id='upload-features-loading'),
+        ]),
 
         # ── Scan Selector ──────────────────────────────────────────────────
         _section("Scan",
@@ -192,7 +163,7 @@ def _sidebar():
                          className='mt-1',
                          style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
             ]),
-            # Database controls (hidden until mode == 'database')
+            # Database / FASTA controls (hidden — disabled for now)
             html.Div(id='database-protein-controls', style={'display': 'none'}, children=[
                 dbc.Button(
                     'Load Demo DB (Ubiquitin, HBB, BSA, HSA, Insulin)',
@@ -201,33 +172,13 @@ def _sidebar():
                     className='w-100 mb-2',
                     style={'fontSize': '0.72rem'},
                 ),
-                _label("— or upload your own FASTA —"),
-                dcc.Upload(
-                    id='upload-fasta',
-                    children=html.Div([
-                        'Drag & drop or ', html.A('browse', style={'color': ACCENT}),
-                        html.Span(' (.fasta, .fa)', style={'color': TEXT_MUTED, 'fontSize': '0.70rem'})
-                    ]),
-                    style={
-                        'borderWidth': '1px', 'borderStyle': 'dashed',
-                        'borderRadius': '4px', 'borderColor': '#cccccc',
-                        'textAlign': 'center', 'padding': '8px 4px',
-                        'color': TEXT_MUTED, 'fontSize': '0.78rem',
-                        'cursor': 'pointer', 'background': '#fafafa',
-                    },
-                    multiple=False,
-                ),
-                dcc.Loading(
-                    id='upload-fasta-loading',
-                    type='circle',
-                    color='#2196F3',
-                    children=html.Div(id='upload-fasta-status',
-                                      className='mt-1',
-                                      style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
-                ),
-                html.Div(id='fasta-protein-count',
-                         className='mt-1',
-                         style={'fontSize': '0.72rem', 'color': TEXT_MUTED}),
+                # FASTA upload disabled
+                html.Div(style={'display': 'none'}, children=[
+                    dcc.Upload(id='upload-fasta', children=[], multiple=False),
+                    html.Div(id='upload-fasta-status'),
+                    html.Div(id='upload-fasta-loading'),
+                    html.Div(id='fasta-protein-count'),
+                ]),
             ]),
         ),
 
