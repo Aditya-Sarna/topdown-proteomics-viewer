@@ -6,7 +6,7 @@ Then open: http://127.0.0.1:8050
 import diskcache
 import dash
 import dash_bootstrap_components as dbc
-from dash.long_callback import DiskcacheLongCallbackManager
+from dash import DiskcacheLongCallbackManager
 
 from layouts.main_layout import create_layout
 from callbacks import register_all_callbacks

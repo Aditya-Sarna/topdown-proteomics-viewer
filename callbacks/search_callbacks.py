@@ -15,7 +15,7 @@ from src.data.amino_acids import AA_MASSES
 def register_callbacks(app):
 
     # ── Run targeted search ────────────────────────────────────────────────
-    @app.long_callback(
+    @app.callback(
         Output('store-search-results',  'data'),
         Output('store-matched-ions',    'data'),
         Output('results-table',         'data'),
@@ -43,6 +43,7 @@ def register_callbacks(app):
              {'height': '10px', 'display': 'block', 'marginBottom': '4px'},
              {'height': '10px', 'display': 'none'}),
         ],
+        background=True,
         prevent_initial_call=True,
     )
     def run_search(set_progress, n_clicks, spectra_data, scan_idx, prot_data,
