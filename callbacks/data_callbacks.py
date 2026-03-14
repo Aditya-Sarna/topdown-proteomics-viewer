@@ -27,7 +27,27 @@ def _load_demo_file(filename: str):
     if filename.lower().endswith('.pcml'):
         return parse_pcml(raw, filename)
     if filename.lower().endswith('.mzml'):
-        return parse_mzml(raw, filename), [], {}
+        spectra = parse_mzml(raw, filename)
+        # Load matching _features.csv if it exists
+        base = os.path.splitext(filename)[0]
+        feat_path = os.path.join(_DEMO_DIR, f'{base}_features.csv')
+        feats = []
+        pinfo = {}
+        if os.path.exists(feat_path):
+            from src.data.parsers import parse_feature_table
+            with open(feat_path, 'r') as fh:
+                feats = parse_feature_table(fh.read(), feat_path)
+            # Extract protein name / sequence from first feature that has one
+            for f in feats:
+                if f.sequence:
+                    pinfo = {
+                        'name': base.replace('_', ' ').title(),
+                        'sequence': f.sequence,
+                    }
+                    break
+        if not pinfo:
+            pinfo = {'name': base.replace('_', ' ').title(), 'sequence': ''}
+        return spectra, feats, pinfo
     return [], [], {}
 from src.data.models import Spectrum
 from src.analysis.mass_utils import (calc_sequence_mass, suggest_modifications,
