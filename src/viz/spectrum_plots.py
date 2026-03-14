@@ -185,12 +185,11 @@ def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
 
     norm = ints / ints.max() * 100.0 if ints.max() > 0 else ints
     xs, ys = _lines(masses, norm)
-    note   = 'OpenMS' if dr.used_openms else 'raw'
 
     fig.add_trace(go.Scatter(
         x=xs, y=ys, mode='lines',
         line=dict(color='#4CAF50', width=1.2),
-        name=f'Deconvolved ({note})',
+        name='Deconvolved',
         hoverinfo='skip',
     ))
 
@@ -208,7 +207,7 @@ def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
         template='plotly_white',
         title=dict(
             text=(f'Deconvolved Spectrum<br><sup>{dr.n_original_peaks}→'
-                  f'{dr.n_deconvoluted_peaks} peaks ({note})</sup>'),
+                  f'{dr.n_deconvoluted_peaks} peaks</sup>'),
             font=dict(size=12),
         ),
         xaxis=dict(title='Monoisotopic Mass (Da, z=1 equiv)', showgrid=True,
