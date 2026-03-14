@@ -143,19 +143,21 @@ def register_callbacks(app):
             # Trim [DECOY] suffix from protein name display
             prot_display = pf.protein_name.replace(' [DECOY]', '')
             table_rows.append({
-                'rank':     rank,
-                'protein':  prot_display[:25] + ('…' if len(prot_display) > 25 else ''),
-                'sequence': pf.sequence[:30] + ('…' if len(pf.sequence) > 30 else ''),
-                'range':    f"{pf.start_pos}–{pf.end_pos}",
-                'score':    f"{pf.score:.2f}",
-                'e_value':  ev_str,
-                'q_value':  f"{r.q_value:.4f}",
-                'matched':  f"{pf.matched_ions}/{pf.total_ions}",
-                'coverage': f"{r.sequence_coverage:.1f}",
-                'th_mass':  f"{pf.theoretical_mass:.4f}",
-                'obs_mass': f"{pf.observed_mass:.4f}",
-                'ppm_error': f"{pf.mass_error_ppm:+.2f}",
-                'ptms':     mods_str,
+                'rank':       rank,
+                'protein':    prot_display[:25] + ('…' if len(prot_display) > 25 else ''),
+                'sequence':   pf.sequence[:30] + ('…' if len(pf.sequence) > 30 else ''),
+                'range':      f"{pf.start_pos}–{pf.end_pos}",
+                'matched_aa': r.matched_aa,
+                'n_tags':     r.n_tags,
+                'score':      f"{pf.score:.2f}",
+                'e_value':    ev_str,
+                'q_value':    f"{r.q_value:.4f}",
+                'matched':    f"{pf.matched_ions}/{pf.total_ions}",
+                'coverage':   f"{r.sequence_coverage:.1f}",
+                'th_mass':    f"{pf.theoretical_mass:.4f}",
+                'obs_mass':   f"{pf.observed_mass:.4f}",
+                'ppm_error':  f"{pf.mass_error_ppm:+.2f}",
+                'ptms':       mods_str,
             })
 
         # Summary
@@ -335,3 +337,61 @@ def register_callbacks(app):
                 width='auto', className='ms-auto',
             ),
         ], className='align-items-center mb-1')
+
+    # ── Inline row-detail expansion (Mass / Start / End / Description) ─────
+    @app.callback(
+        Output('result-row-detail', 'children'),
+        Output('result-row-detail', 'style'),
+        Input('results-table', 'selected_rows'),
+        State('store-search-results', 'data'),
+        prevent_initial_call=True,
+    )
+    def update_row_detail(selected_rows, results_data):
+        import dash_bootstrap_components as dbc
+
+        _hidden = {'display': 'none'}
+        _visible = {
+            'display': 'block',
+            'backgroundColor': '#e8f0fe',
+            'borderLeft': '3px solid #1a73e8',
+            'borderBottom': '1px solid #b0c4de',
+            'padding': '7px 14px',
+            'marginBottom': '6px',
+            'fontSize': '0.78rem',
+            'borderRadius': '0 0 4px 0',
+        }
+
+        if not selected_rows or not results_data:
+            return '', _hidden
+
+        idx = selected_rows[0]
+        if idx >= len(results_data):
+            return '', _hidden
+
+        sr = SearchResult.from_dict(results_data[idx])
+        pf = sr.proteoform
+
+        # Parse the protein name for a clean accession + description split
+        full_name = pf.protein_name.replace(' [DECOY]', '')
+        parts = full_name.split(' ', 1)
+        accession   = parts[0]
+        description = parts[1] if len(parts) > 1 else full_name
+
+        def _field(label, value):
+            return dbc.Col([
+                html.Span(label, style={'fontWeight': '600', 'marginRight': '4px',
+                                        'color': '#1a73e8'}),
+                html.Span(str(value), style={'color': '#111111'}),
+            ], width='auto', className='me-4 mb-1')
+
+        return dbc.Row([
+            _field('Mass',           f'{pf.theoretical_mass:.7f}'),
+            _field('Start Position', pf.start_pos),
+            _field('End Position',   pf.end_pos),
+            dbc.Col([
+                html.Span('Description', style={'fontWeight': '600', 'marginRight': '4px',
+                                                'color': '#1a73e8'}),
+                html.Span(description,
+                          style={'color': '#111111', 'wordBreak': 'break-word'}),
+            ], width=True),
+        ], className='gx-2 align-items-start flex-wrap'), _visible

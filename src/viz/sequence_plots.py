@@ -15,33 +15,35 @@ import numpy as np
 import plotly.graph_objects as go
 
 from ..data.models import Proteoform, FragmentIon, Modification
-from ..analysis.peak_matching import coverage_map
+from ..analysis.peak_matching import coverage_map, coverage_count_map
 
 RESIDUES_PER_ROW = 20
 DARK_BG  = '#ffffff'
 PLOT_BG  = '#ffffff'
 
-_COLORS = {
-    'n_term':    '#BBDEFB',
-    'c_term':    '#FFCDD2',
-    'both':      '#CE93D8',
-    'uncovered': '#F0F0F0',
-    'ptm':       '#F9A825',
-}
+# Gradient colour palettes: index = coverage depth [0=none, 1=low, 2=mid, 3=high]
+_N_FILL   = ['#F0F0F0', '#E3F2FD', '#90CAF9', '#1565C0']   # N-terminal (b/c/a)
+_N_BORD   = ['#cccccc', '#90CAF9', '#1976D2', '#0D47A1']
+_C_FILL   = ['#F0F0F0', '#FCE4EC', '#EF9A9A', '#880E4F']   # C-terminal (y/z)
+_C_BORD   = ['#cccccc', '#EF9A9A', '#C62828', '#B71C1C']
+_B_FILL   = ['#F0F0F0', '#F3E5F5', '#CE93D8', '#4A148C']   # Both
+_B_BORD   = ['#cccccc', '#CE93D8', '#8E24AA', '#311B92']
+_PTM_GOLD = '#F9A825'
 
-_BORDER_COLORS = {
-    'n_term':    '#1976D2',
-    'c_term':    '#C62828',
-    'both':      '#6A1B9A',
-    'uncovered': '#cccccc',
-}
-
+# Legend uses the "mid" (index-2) shades
 _LEGEND = [
-    ('N-terminal (b/c/a)', _COLORS['n_term']),
-    ('C-terminal (y/z)',   _COLORS['c_term']),
-    ('Both ends',          _COLORS['both']),
-    ('Uncovered',          _COLORS['uncovered']),
+    ('N-terminal (b/c/a)', _N_FILL[2]),
+    ('C-terminal (y/z)',   _C_FILL[2]),
+    ('Both ends',          _B_FILL[2]),
+    ('Uncovered',          _N_FILL[0]),
 ]
+
+
+def _depth_idx(n: int) -> int:
+    if n == 0: return 0
+    if n == 1: return 1
+    if n <= 3: return 2
+    return 3
 
 
 def create_sequence_plot(proteoform: Proteoform,
@@ -65,12 +67,13 @@ def create_sequence_plot(proteoform: Proteoform,
     n_aa     = len(seq)
     n_rows   = (n_aa + RESIDUES_PER_ROW - 1) // RESIDUES_PER_ROW
     cov      = coverage_map(seq, matched_ions or [])
+    cov_cnt  = coverage_count_map(seq, matched_ions or [])
 
-    # Modification lookup: 0-based position -> list of mod names
+    # Modification lookup: 0-based position -> list of (name, mass_shift)
     mod_lookup: dict = {}
     for m in proteoform.modifications:
         p = m.position - 1
-        mod_lookup.setdefault(p, []).append(m.name)
+        mod_lookup.setdefault(p, []).append((m.name, m.mass_shift))
 
     # Build grid coordinates
     xs, ys, colors, border_colors, labels, hovers = [], [], [], [], [], []
@@ -81,28 +84,33 @@ def create_sequence_plot(proteoform: Proteoform,
         ys.append(-row)
         labels.append(aa)
 
-        covered = cov.get(i, [])
-        has_n = any(t in ('b', 'c', 'a') for t in covered)
-        has_c = any(t in ('y', 'z') for t in covered)
-
-        if has_n and has_c:
-            colors.append(_COLORS['both'])
-            border_colors.append(_BORDER_COLORS['both'])
-        elif has_n:
-            colors.append(_COLORS['n_term'])
-            border_colors.append(_BORDER_COLORS['n_term'])
-        elif has_c:
-            colors.append(_COLORS['c_term'])
-            border_colors.append(_BORDER_COLORS['c_term'])
+        nn, nc = cov_cnt.get(i, (0, 0))
+        if nn > 0 and nc > 0:
+            idx = _depth_idx(nn + nc)
+            colors.append(_B_FILL[idx])
+            border_colors.append(_B_BORD[idx])
+        elif nn > 0:
+            idx = _depth_idx(nn)
+            colors.append(_N_FILL[idx])
+            border_colors.append(_N_BORD[idx])
+        elif nc > 0:
+            idx = _depth_idx(nc)
+            colors.append(_C_FILL[idx])
+            border_colors.append(_C_BORD[idx])
         else:
-            colors.append(_COLORS['uncovered'])
-            border_colors.append(_BORDER_COLORS['uncovered'])
+            colors.append(_N_FILL[0])
+            border_colors.append('#cccccc')
 
-        mnames = mod_lookup.get(i, [])
+        # Gold border on PTM-modified cells
+        if i in mod_lookup:
+            border_colors[-1] = _PTM_GOLD
+
+        mods_list = mod_lookup.get(i, [])
         hov = f"<b>{aa}{i+1}</b>"
-        if mnames:
-            hov += f"<br>PTMs: {', '.join(mnames)}"
-        hov += f"<br>Ions: {', '.join(covered) or 'none'}"
+        if mods_list:
+            hov += '<br>PTMs: ' + ', '.join(f"{n} ({s:+.3f})" for n, s in mods_list)
+        hov += f"<br>Ions: {', '.join(cov.get(i, [])) or 'none'}"
+        hov += f"<br>Depth: N={nn} C={nc}"
         hovers.append(hov)
 
     fig.add_trace(go.Scatter(
@@ -117,20 +125,24 @@ def create_sequence_plot(proteoform: Proteoform,
         showlegend=False,
     ))
 
-    # PTM asterisk markers
-    ptm_xs, ptm_ys, ptm_hov = [], [], []
-    for idx, mnames in mod_lookup.items():
+    # PTM mass-shift labels (replace asterisk with delta-mass text)
+    ptm_xs, ptm_ys, ptm_texts, ptm_hov = [], [], [], []
+    for idx, mods_list in mod_lookup.items():
         if 0 <= idx < n_aa:
             ptm_xs.append(idx % RESIDUES_PER_ROW)
-            ptm_ys.append(-(idx // RESIDUES_PER_ROW) + 0.65)
-            ptm_hov.append('; '.join(mnames))
+            ptm_ys.append(-(idx // RESIDUES_PER_ROW) + 0.68)
+            total_shift = sum(ms for _, ms in mods_list)
+            # Compact format: +114.9 or +79.97 depending on magnitude
+            label = f'{total_shift:+.1f}' if abs(total_shift) >= 10 else f'{total_shift:+.2f}'
+            ptm_texts.append(label)
+            ptm_hov.append(' | '.join(f"{nm} ({ms:+.4f})" for nm, ms in mods_list))
     if ptm_xs:
         fig.add_trace(go.Scatter(
             x=ptm_xs, y=ptm_ys,
             mode='markers+text',
             marker=dict(size=0, opacity=0),
-            text=['*'] * len(ptm_xs),
-            textfont=dict(color=_COLORS['ptm'], size=16, family='Arial Black'),
+            text=ptm_texts,
+            textfont=dict(color=_PTM_GOLD, size=7, family='Arial'),
             textposition='middle center',
             hovertext=ptm_hov, hoverinfo='text',
             showlegend=False, name='PTM',
@@ -154,7 +166,7 @@ def create_sequence_plot(proteoform: Proteoform,
                 fig.add_shape(type='line',
                     x0=col + 0.48, x1=col + 0.48,
                     y0=-row - 0.42, y1=-row + 0.42,
-                    line=dict(color=_COLORS['n_term'], width=2))
+                    line=dict(color=_N_BORD[2], width=2))
 
         for pos in cleavage_y:
             if 0 < pos < n_aa:
@@ -163,7 +175,7 @@ def create_sequence_plot(proteoform: Proteoform,
                 fig.add_shape(type='line',
                     x0=col + 0.48, x1=col + 0.48,
                     y0=-row - 0.42, y1=-row + 0.42,
-                    line=dict(color=_COLORS['c_term'], width=2, dash='dot'))
+                    line=dict(color=_C_BORD[2], width=2, dash='dot'))
 
     # Row position labels (left margin)
     for row_i in range(n_rows):

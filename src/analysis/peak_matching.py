@@ -102,3 +102,56 @@ def sequence_coverage_pct(sequence: str,
         elif ion.ion_type in ('y', 'z'):
             covered[n - ion.position:] = True
     return float(covered.sum()) / n * 100.0
+
+
+def coverage_count_map(sequence: str,
+                       matched_ions: List[FragmentIon]) -> Dict[int, Tuple[int, int]]:
+    """
+    Return {i: (n_nterm, n_cterm)} per 0-based residue index.
+    Counts distinct matched N- and C-terminal ions covering each position.
+    Used for the coverage intensity gradient in the sequence viewer.
+    """
+    n = len(sequence)
+    n_counts = np.zeros(n, dtype=np.int32)
+    c_counts = np.zeros(n, dtype=np.int32)
+    for ion in matched_ions:
+        if not ion.matched:
+            continue
+        if ion.ion_type in ('b', 'c', 'a'):
+            n_counts[:ion.position] += 1
+        elif ion.ion_type in ('y', 'z'):
+            c_counts[n - ion.position:] += 1
+    return {i: (int(n_counts[i]), int(c_counts[i])) for i in range(n)}
+
+
+def count_sequence_tags(sequence: str,
+                        matched_ions: List[FragmentIon],
+                        min_tag_length: int = 3) -> int:
+    """
+    Count runs of ≥ min_tag_length consecutive matched b- or y-ion positions.
+    Each qualifying run is one 'sequence tag'.
+    """
+    if not sequence:
+        return 0
+
+    b_positions = sorted({ion.position for ion in matched_ions
+                           if ion.matched and ion.ion_type in ('b', 'c', 'a')})
+    y_positions = sorted({ion.position for ion in matched_ions
+                           if ion.matched and ion.ion_type in ('y', 'z')})
+
+    def _runs(positions: list) -> int:
+        if not positions:
+            return 0
+        count, run = 0, 1
+        for i in range(1, len(positions)):
+            if positions[i] == positions[i - 1] + 1:
+                run += 1
+            else:
+                if run >= min_tag_length:
+                    count += 1
+                run = 1
+        if run >= min_tag_length:
+            count += 1
+        return count
+
+    return _runs(b_positions) + _runs(y_positions)

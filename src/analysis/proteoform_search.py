@@ -18,7 +18,7 @@ from ..data.models import Spectrum, Proteoform, Modification, SearchResult, Frag
 from ..data.amino_acids import PTM_DATABASE, PTM_TARGET_RESIDUES, AA_MASSES as _AA_MASSES
 _VALID_AA = frozenset(_AA_MASSES)
 from .fragment_ions import calc_ions
-from .peak_matching import match_peaks, sequence_coverage_pct
+from .peak_matching import match_peaks, sequence_coverage_pct, count_sequence_tags
 from .mass_utils import calc_sequence_mass, mz_to_mass, ppm_error
 
 
@@ -216,6 +216,8 @@ def _score_candidates(candidates: List[Tuple],
         frac  = n_matched / n_total
         score = _score(n_matched, n_b, n_y, n_c, n_z, frac, obs_mass, th_mass)
         cov   = sequence_coverage_pct(seq, matched)
+        n_tags     = count_sequence_tags(seq, matched)
+        matched_aa = round(cov * len(seq) / 100)
 
         err_da  = round(obs_mass - th_mass, 4) if obs_mass else 0.0
         err_ppm = round(ppm_error(obs_mass, th_mass), 2) if obs_mass and th_mass else 0.0
@@ -241,6 +243,8 @@ def _score_candidates(candidates: List[Tuple],
             matched_c=n_c, matched_z=n_z,
             sequence_coverage=round(cov, 1),
             is_decoy=is_decoy,
+            n_tags=n_tags,
+            matched_aa=matched_aa,
         ))
     return results
 

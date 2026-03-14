@@ -187,6 +187,8 @@ class SearchResult:
     e_value: float = 1.0
     q_value: float = 1.0
     is_decoy: bool = False
+    n_tags: int = 0
+    matched_aa: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -200,6 +202,8 @@ class SearchResult:
             'e_value': self.e_value,
             'q_value': self.q_value,
             'is_decoy': self.is_decoy,
+            'n_tags': self.n_tags,
+            'matched_aa': self.matched_aa,
         }
 
     @staticmethod
@@ -215,4 +219,6 @@ class SearchResult:
             e_value=d.get('e_value', 1.0),
             q_value=d.get('q_value', 1.0),
             is_decoy=d.get('is_decoy', False),
+            n_tags=d.get('n_tags', 0),
+            matched_aa=d.get('matched_aa', 0),
         )
