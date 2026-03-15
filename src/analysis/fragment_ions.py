@@ -188,28 +188,49 @@ def calc_internal_ions(
     import numpy as np
 
     n = len(sequence)
-    results = []
+    if n < 3:
+        return []
 
-    for i in range(1, n - 1):                       # N-terminal cleavage: after residue i
+    # ── Pass 1: enumerate all (start, end) pairs and accumulate masses ──────
+    # This avoids creating one numpy array per fragment (was ~1000+ allocs).
+    aa_vals = [AA_MASSES.get(c, 0.0) for c in sequence]
+    starts, ends, th_mzs = [], [], []
+    for i in range(1, n - 1):
         cum = 0.0
-        for j in range(i, min(i + max_frag_length, n - 1)):  # C-terminal cleavage: before residue j+1
-            cum += AA_MASSES.get(sequence[j], 0.0)
-            frag_len = j - i + 1
-            if frag_len < 2:
-                continue
-            mz_th = cum + PROTON        # b-type singly charged: no water added
+        limit = min(i + max_frag_length, n - 1)
+        for j in range(i, limit):
+            cum += aa_vals[j]
+            if j - i + 1 >= 2:          # min fragment length = 2
+                starts.append(i)
+                ends.append(j + 1)
+                th_mzs.append(cum + PROTON)   # b-type: no water
 
-            matched    = False
-            obs_mz_val = 0.0
-            ppm_err    = 0.0
-            if len(obs_mz) > 0:
-                diffs  = np.abs((obs_mz - mz_th) / mz_th * 1e6)
-                best   = int(diffs.argmin())
-                if diffs[best] < tolerance_ppm:
-                    matched    = True
-                    obs_mz_val = float(obs_mz[best])
-                    ppm_err    = float(diffs[best])
+    if not th_mzs:
+        return []
 
-            results.append((i, j + 1, mz_th, matched, obs_mz_val, ppm_err))
+    th_arr = np.array(th_mzs, dtype=np.float64)
+    obs_arr = np.asarray(obs_mz, dtype=np.float64)
 
-    return results
+    if len(obs_arr) == 0:
+        return [(s, e, float(m), False, 0.0, 0.0)
+                for s, e, m in zip(starts, ends, th_mzs)]
+
+    # ── Pass 2: single batch binary-search match (replaces per-fragment argmin) ─
+    idxs  = np.searchsorted(obs_arr, th_arr)
+    i_l   = np.clip(idxs - 1, 0, len(obs_arr) - 1)
+    i_r   = np.clip(idxs,     0, len(obs_arr) - 1)
+    dl    = np.abs(obs_arr[i_l] - th_arr)
+    dr    = np.abs(obs_arr[i_r] - th_arr)
+    left  = dl <= dr
+    best_diff = np.where(left, dl, dr)
+    best_obs  = np.where(left, obs_arr[i_l], obs_arr[i_r])
+    tols      = th_arr * tolerance_ppm / 1e6
+    matched   = best_diff <= tols
+    ppm_errs  = best_diff / th_arr * 1e6
+
+    return [
+        (starts[k], ends[k], float(th_arr[k]), bool(matched[k]),
+         float(best_obs[k]) if matched[k] else 0.0,
+         float(ppm_errs[k]) if matched[k] else 0.0)
+        for k in range(len(starts))
+    ]

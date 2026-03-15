@@ -38,11 +38,12 @@ def register_callbacks(app):
 
         fig = create_sequence_plot(pf, ions, show_cleavage=bool(show_cleavage))
 
-        # Coverage text
-        from src.analysis.peak_matching import coverage_map
+        # Coverage text — use vectorized coverage_count_map (numpy) instead of
+        # coverage_map (Python loops), avoiding a redundant O(N×M) pass.
         if pf.sequence:
-            cov = coverage_map(pf.sequence, ions)
-            n_cov = sum(1 for v in cov.values() if v)
+            from src.analysis.peak_matching import coverage_count_map
+            cov_cnt_cb = coverage_count_map(pf.sequence, ions)
+            n_cov = sum(1 for nn, nc in cov_cnt_cb.values() if nn + nc > 0)
             pct   = n_cov / len(pf.sequence) * 100
             cov_text = f"Sequence coverage: {n_cov}/{len(pf.sequence)} aa ({pct:.1f}%)"
         else:

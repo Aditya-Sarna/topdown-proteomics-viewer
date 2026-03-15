@@ -195,8 +195,8 @@ def create_sequence_plot(proteoform: Proteoform,
             name=lbl, showlegend=True,
         ))
 
-    # Build title
-    n_covered = sum(1 for v in coverage_map(seq, matched_ions or []).values() if v)
+    # Build title — reuse already-computed `cov` (avoids second coverage_map call)
+    n_covered = sum(1 for v in cov.values() if v)
     cov_pct   = n_covered / n_aa * 100 if n_aa else 0
     n_mods    = len(proteoform.modifications)
     title_line1 = (f"<b>{proteoform.protein_name or 'Protein'}</b>  "
