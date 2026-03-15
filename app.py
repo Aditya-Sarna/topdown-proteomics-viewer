@@ -1,10 +1,11 @@
-"""
+""" 
 ProForm Viewer — Top-Down Proteomics Analysis Tool
 Run with:  python app.py
 Then open: http://127.0.0.1:8050
 """
 import dash
 import dash_bootstrap_components as dbc
+from flask import Flask
 
 from layouts.main_layout import create_layout
 from callbacks import register_all_callbacks
@@ -24,6 +25,10 @@ app.layout = create_layout()
 register_all_callbacks(app)
 
 server = app.server
+
+@server.route('/healthz')
+def health():
+    return 'ok', 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=8050)
