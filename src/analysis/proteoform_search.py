@@ -191,11 +191,16 @@ def _score_candidates(candidates: List[Tuple],
                       is_decoy: bool,
                       no_mass_penalty: bool = False) -> List[SearchResult]:
     results: List[SearchResult] = []
+    # 2 Da + 100 ppm handles isotope ambiguity and precursor selection errors.
+    # Skipping calc_ions() for non-matching masses is the biggest speed win.
+    mass_tol = (obs_mass * 100e-6 + 2.0) if obs_mass > 0 else 0.0
     for seq, start, end, mods in candidates:
         if len(seq) < 3:
             continue
         mod_map: Dict[int, float] = {m.position: m.mass_shift for m in mods}
         th_mass = calc_sequence_mass(seq, mods)
+        if mass_tol and abs(th_mass - obs_mass) > mass_tol:
+            continue
         ions    = calc_ions(seq, ion_types, mod_map, max_charge)
         if not ions:
             continue

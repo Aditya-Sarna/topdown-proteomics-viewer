@@ -21,11 +21,18 @@ PLOT_BG = '#ffffff'
 
 def _lines(mz_arr, int_arr):
     """Convert arrays to None-separated x/y for vertical line rendering."""
-    xs, ys = [], []
-    for m, i in zip(mz_arr, int_arr):
-        xs += [m, m, None]
-        ys += [0, i, None]
-    return xs, ys
+    mz_arr  = np.asarray(mz_arr,  dtype=object)
+    int_arr = np.asarray(int_arr, dtype=object)
+    n = len(mz_arr)
+    xs = np.empty(n * 3, dtype=object)
+    ys = np.empty(n * 3, dtype=object)
+    xs[0::3] = mz_arr
+    xs[1::3] = mz_arr
+    xs[2::3] = None
+    ys[0::3] = 0
+    ys[1::3] = int_arr
+    ys[2::3] = None
+    return xs.tolist(), ys.tolist()
 
 
 def create_spectrum_plot(spectrum: Spectrum,
@@ -119,8 +126,20 @@ def create_spectrum_plot(spectrum: Spectrum,
         ))
 
     if matched_ions:
-        all_matched = [(ion.observed_mz, intensity[np.argmin(np.abs(mz - ion.observed_mz))], ion.label())
-                       for ion in matched_ions if ion.matched]
+        sorted_mz = np.sort(mz)
+        all_matched = []
+        for ion in matched_ions:
+            if not ion.matched:
+                continue
+            idx_s = np.searchsorted(sorted_mz, ion.observed_mz)
+            idx_s = np.clip(idx_s, 0, len(sorted_mz) - 1)
+            if idx_s > 0 and (idx_s == len(sorted_mz) or
+                              abs(sorted_mz[idx_s - 1] - ion.observed_mz) < abs(sorted_mz[idx_s] - ion.observed_mz)):
+                idx_s -= 1
+            closest_mz = sorted_mz[idx_s]
+            orig_idx = np.searchsorted(mz, closest_mz)
+            orig_idx = np.clip(orig_idx, 0, len(mz) - 1)
+            all_matched.append((ion.observed_mz, intensity[orig_idx], ion.label()))
         all_matched.sort(key=lambda x: -x[1])
         mz_span = (mz.max() - mz.min()) if len(mz) > 1 else 1000.0
         min_gap = mz_span * 0.012

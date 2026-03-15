@@ -53,11 +53,12 @@ def create_raw_heatmap(
         rkey = round(spec.retention_time, 4)
         ri   = rt_to_idx.get(rkey, 0)
         mask = (spec.mz_array >= mz_min) & (spec.mz_array <= mz_max)
-        for mz, inty in zip(spec.mz_array[mask], spec.intensity_array[mask]):
-            mi = int((mz - mz_min) / mz_step)
-            mi = min(mi, n_mz_bins - 1)
-            if matrix[mi, ri] < inty:
-                matrix[mi, ri] = inty
+        mz_masked   = spec.mz_array[mask]
+        inty_masked = spec.intensity_array[mask]
+        if len(mz_masked) == 0:
+            continue
+        mi_arr = np.clip(((mz_masked - mz_min) / mz_step).astype(np.intp), 0, n_mz_bins - 1)
+        np.maximum.at(matrix[:, ri], mi_arr, inty_masked)
 
     log_mat    = np.log10(matrix + 1.0)
     mz_edges   = np.linspace(mz_min, mz_max, n_mz_bins + 1)
@@ -129,11 +130,10 @@ def create_deconvolved_heatmap(spectra: List[Spectrum]) -> go.Figure:
     rt_step = (rt_max - rt_min) / n_rt
 
     matrix = np.zeros((n_mass, n_rt), dtype=np.float64)
-    for rt, mass, inty in zip(rts_arr, masses_arr, ints_arr):
-        ri = int((rt   - rt_min)   / rt_step);   ri = min(ri, n_rt   - 1)
-        mi = int((mass - mass_min) / mass_step);  mi = min(mi, n_mass - 1)
-        if mi >= 0 and matrix[mi, ri] < inty:
-            matrix[mi, ri] = inty
+    ri_arr = np.clip(((rts_arr - rt_min) / rt_step).astype(np.intp), 0, n_rt - 1)
+    mi_arr = np.clip(((masses_arr - mass_min) / mass_step).astype(np.intp), 0, n_mass - 1)
+    flat_idx = mi_arr * n_rt + ri_arr
+    np.maximum.at(matrix.ravel(), flat_idx, ints_arr)
 
     log_mat      = np.log10(matrix + 1.0)
     mass_edges   = np.linspace(mass_min, mass_max, n_mass + 1)

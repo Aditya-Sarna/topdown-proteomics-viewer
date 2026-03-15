@@ -146,12 +146,18 @@ def register_callbacks(app):
                 _new_ions = calc_ions(top_pf.sequence, _itypes, _mod_map, int(max_z or 4))
                 results[0].fragment_ions = list(_match(_new_ions, spectrum, float(tol or 10)))
 
-        # Store results
-        results_store = [r.to_dict() for r in results]
+        # Store results — only matched fragment ions to keep store size small
+        # (unmatched ions are ~97% of all ions but carry no useful information
+        # for downstream callbacks; they can be regenerated on demand).
+        results_store = []
+        for r in results:
+            rd = r.to_dict()
+            rd['fragment_ions'] = [ion for ion in rd['fragment_ions'] if ion['matched']]
+            results_store.append(rd)
 
-        # Matched ions of top hit
+        # Matched ions of top hit (only matched needed for spectrum overlay)
         top       = results[0]
-        ions_data = [ion.to_dict() for ion in top.fragment_ions]
+        ions_data = [ion.to_dict() for ion in top.fragment_ions if ion.matched]
 
         # Table rows
         table_rows = []
@@ -218,10 +224,11 @@ def register_callbacks(app):
             ) if pf0.modifications else html.Div(),
         ])
 
-        # Ion rows for the top hit (auto-populated without requiring a row click)
+        # Ion rows for the top hit — only matched ions (much smaller table)
         top_ion_rows = [
             _build_ion_row(ion)
             for ion in sorted(top.fragment_ions, key=lambda x: (x.ion_type, x.position))
+            if ion.matched
         ]
 
         return results_store, ions_data, table_rows, top_ion_rows, summary, f'✓ {n} hits', top_text, top.proteoform.to_dict()
@@ -325,7 +332,7 @@ def register_callbacks(app):
         spectrum = Spectrum.from_dict(spectra_data[scan_idx or 0])
         matched  = match_peaks(ions, spectrum, float(tol or 10))
 
-        return pf.to_dict(), [ion.to_dict() for ion in matched]
+        return pf.to_dict(), [ion.to_dict() for ion in matched if ion.matched]
 
     # ── Score distribution (updates whenever search results change) ─────────
     @app.callback(
@@ -342,8 +349,7 @@ def register_callbacks(app):
                               margin=dict(t=35, b=35, l=40, r=10))
             return fig
 
-        from src.data.models import SearchResult
-        scores = [SearchResult.from_dict(r).proteoform.score for r in results_data]
+        scores = [r['proteoform']['score'] for r in results_data]
         fig.add_trace(go.Histogram(
             x=scores, nbinsx=max(10, len(scores) // 2),
             marker_color='#1a73e8', opacity=0.8, name='Target',
@@ -405,17 +411,16 @@ def register_callbacks(app):
             from src.data.models import Proteoform
             pf = Proteoform.from_dict(selected_result)
             matched = pf.matched_ions
-            # find matching SearchResult for coverage
+            # find matching result for coverage — read dict directly, no full deserialize
             if results_data:
                 for r in results_data:
-                    sr = SearchResult.from_dict(r)
-                    if sr.proteoform.sequence == pf.sequence:
-                        coverage = sr.sequence_coverage
+                    if r['proteoform']['sequence'] == pf.sequence:
+                        coverage = r.get('sequence_coverage', 0.0)
                         break
         elif results_data:
-            sr       = SearchResult.from_dict(results_data[0])
-            matched  = sr.proteoform.matched_ions
-            coverage = sr.sequence_coverage
+            r0       = results_data[0]
+            matched  = r0['proteoform'].get('matched_ions', 0)
+            coverage = r0.get('sequence_coverage', 0.0)
 
         if matched == 0 and not results_data:
             return html.Small('Run search to see fragment matches.',
@@ -465,8 +470,8 @@ def register_callbacks(app):
         if idx >= len(results_data):
             return '', _hidden
 
-        sr = SearchResult.from_dict(results_data[idx])
-        pf = sr.proteoform
+        from src.data.models import Proteoform
+        pf = Proteoform.from_dict(results_data[idx]['proteoform'])
 
         # Parse the protein name for a clean accession + description split
         full_name = pf.protein_name.replace(' [DECOY]', '')

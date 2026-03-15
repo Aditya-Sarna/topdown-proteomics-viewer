@@ -53,6 +53,14 @@ def deconvolute_spectrum(
     """
     n_orig = len(spectrum.mz_array)
 
+    # pyopenms is disabled — return the original spectrum immediately
+    return DeconvolutionResult(
+        spectrum=spectrum,
+        n_original_peaks=n_orig,
+        n_deconvoluted_peaks=n_orig,
+        used_openms=False,
+    )
+
     try:
         # import pyopenms  # temporarily disabled
         raise ImportError("pyopenms disabled")

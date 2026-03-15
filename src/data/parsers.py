@@ -157,25 +157,43 @@ def parse_feature_table(text: str, filename: str = 'features') -> List[Feature]:
     try:
         df = pd.read_csv(io.StringIO(text))
         df.columns = [c.strip().lower().replace(' ', '_').replace('/', '_') for c in df.columns]
-        features = []
-        for i, row in df.iterrows():
-            mz  = float(row.get('mz', row.get('mz_apex', 0)))
-            rt  = float(row.get('rt', row.get('rt_apex', 0)))
-            f = Feature(
-                feature_id=str(row.get('feature_id', i)),
-                mz_apex=mz,
-                rt_apex=rt,
-                rt_start=float(row.get('rt_start', rt - 1.0)),
-                rt_end=float(row.get('rt_end', rt + 1.0)),
-                mz_start=float(row.get('mz_start', mz - 0.01)),
-                mz_end=float(row.get('mz_end', mz + 0.01)),
-                intensity=float(row.get('intensity', row.get('abundance', 1.0))),
-                charge=int(row.get('charge', row.get('charge_state', 1))),
-                monoisotopic_mass=float(row.get('mass', row.get('monoisotopic_mass', 0.0))),
-                sequence=str(row.get('sequence', '') or '').replace('nan', ''),
-                proteoform_id=str(row.get('proteoform_id', row.get('proteoform', '')) or '').replace('nan', ''),
+
+        def _col(primary, fallback, default):
+            if primary in df.columns:
+                return df[primary]
+            if fallback in df.columns:
+                return df[fallback]
+            return pd.Series([default] * len(df), index=df.index)
+
+        mz_s   = _col('mz',         'mz_apex',          0.0).astype(float)
+        rt_s   = _col('rt',         'rt_apex',           0.0).astype(float)
+        fid_s  = _col('feature_id', '_index',            None)
+        if fid_s is None or '_index' not in df.columns:
+            fid_s = pd.Series(df.index.astype(str), index=df.index)
+        else:
+            fid_s = fid_s.astype(str)
+
+        features = [
+            Feature(
+                feature_id=fid_s.iat[i],
+                mz_apex=mz_s.iat[i],
+                rt_apex=rt_s.iat[i],
+                rt_start=float(_col('rt_start',  '_', None).iat[i]
+                                if 'rt_start'  in df.columns else rt_s.iat[i] - 1.0),
+                rt_end=float(_col('rt_end',    '_', None).iat[i]
+                              if 'rt_end'    in df.columns else rt_s.iat[i] + 1.0),
+                mz_start=float(_col('mz_start',  '_', None).iat[i]
+                                if 'mz_start'  in df.columns else mz_s.iat[i] - 0.01),
+                mz_end=float(_col('mz_end',    '_', None).iat[i]
+                              if 'mz_end'    in df.columns else mz_s.iat[i] + 0.01),
+                intensity=float((_col('intensity', 'abundance', 1.0)).iat[i]),
+                charge=int((_col('charge', 'charge_state', 1)).iat[i]),
+                monoisotopic_mass=float((_col('mass', 'monoisotopic_mass', 0.0)).iat[i]),
+                sequence=str(df['sequence'].iat[i] if 'sequence' in df.columns else '').replace('nan', ''),
+                proteoform_id=str((_col('proteoform_id', 'proteoform', '')).iat[i]).replace('nan', ''),
             )
-            features.append(f)
+            for i in range(len(df))
+        ]
         return features
     except Exception as e:
         print(f"Feature table parse error: {e}")

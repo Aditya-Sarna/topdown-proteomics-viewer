@@ -9,6 +9,7 @@ Data-loading callbacks:
 """
 import json
 import os
+import functools
 from dash import Input, Output, State, no_update
 
 from src.data.parsers import (decode_upload, generate_demo_spectrum,
@@ -19,6 +20,7 @@ from src.data.parsers import (decode_upload, generate_demo_spectrum,
 _DEMO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'demo_data')
 
 
+@functools.lru_cache(maxsize=8)
 def _load_demo_file(filename: str):
     """Return (spectra, feats, pinfo) for a file in demo_data/."""
     path = os.path.join(_DEMO_DIR, filename)

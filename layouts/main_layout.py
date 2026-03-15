@@ -147,7 +147,7 @@ def _sidebar():
             html.Div(id='targeted-protein-controls', children=[
                 _label("Protein Name"),
                 dbc.Input(id='protein-name', placeholder='e.g. Ubiquitin',
-                          size='sm', className='mb-1',
+                          size='sm', className='mb-1', debounce=True,
                           style={'background': '#ffffff', 'color': '#111111',
                                  'border': '1px solid #cccccc'}),
                 _label("Sequence (single-letter)"),
@@ -155,6 +155,7 @@ def _sidebar():
                     id='protein-sequence',
                     placeholder='MQIFVKTLTGK…',
                     rows=4,
+                    debounce=True,
                     style={'background': '#ffffff', 'color': '#111111',
                            'fontSize': '0.78rem', 'fontFamily': 'Courier New',
                            'border': '1px solid #cccccc', 'resize': 'vertical'},

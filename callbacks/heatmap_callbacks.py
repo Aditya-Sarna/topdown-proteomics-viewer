@@ -14,6 +14,7 @@ def register_callbacks(app):
         Output('deconv-heatmap-graph', 'figure'),
         Input('store-spectra',      'data'),
         Input('heatmap-ms-level',   'value'),
+        prevent_initial_call=True,
     )
     def update_heatmaps(spectra_data, ms_level):
         spectra = [Spectrum.from_dict(d) for d in (spectra_data or [])]
