@@ -349,15 +349,27 @@ def _sidebar():
 def _tab_spectrum():
     return dbc.Tab(label='Spectrum', tab_id='tab-spectrum',
                    children=dbc.Card(dbc.CardBody([
-                       dcc.Graph(id='spectrum-graph', config={'displayModeBar': True},
-                                 style={'height': '520px'}),
+                       dcc.Loading(
+                           id='loading-spectrum-graph',
+                           type='circle',
+                           color='#1a73e8',
+                           children=dcc.Graph(id='spectrum-graph',
+                                             config={'displayModeBar': True},
+                                             style={'height': '520px'}),
+                       ),
                        html.Hr(style={'borderColor': '#dddddd'}),
                        html.Div(id='peak-click-info',
                                 style={'fontSize': '0.78rem', 'color': TEXT_MUTED}),
                        html.Hr(style={'borderColor': '#dddddd'}),
                        html.H6('Deconvolved Spectrum', className='text-muted small mb-1'),
-                       dcc.Graph(id='deconv-spectrum-graph', config={'displayModeBar': True},
-                                 style={'height': '360px'}),
+                       dcc.Loading(
+                           id='loading-deconv-spectrum-graph',
+                           type='circle',
+                           color='#1a73e8',
+                           children=dcc.Graph(id='deconv-spectrum-graph',
+                                             config={'displayModeBar': True},
+                                             style={'height': '360px'}),
+                       ),
                    ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
 
 
