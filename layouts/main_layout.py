@@ -22,10 +22,16 @@ _DEMO_OPTIONS = [
 # ──────────────────────────────────────────────────────────────────────────────
 # Colour constants
 # ──────────────────────────────────────────────────────────────────────────────
-SIDEBAR_BG = '#f8f8f8'
+SIDEBAR_BG = '#f8f9fa'
 CARD_BG    = '#ffffff'
 ACCENT     = '#1a73e8'
-TEXT_MUTED = '#555555'
+TEXT_MUTED = '#5f6368'
+BORDER     = '#dadce0'
+
+# Graph config shared across all graphs
+_GRAPH_CONFIG = {'displayModeBar': True, 'displaylogo': False,
+                 'modeBarButtonsToRemove': ['toImage'],
+                 'toImageButtonOptions': {'format': 'svg', 'scale': 2}}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -34,20 +40,31 @@ TEXT_MUTED = '#555555'
 
 def _section(title, *children):
     return html.Div([
-        html.H6(title, className='text-uppercase fw-bold mb-2',
-                style={'color': TEXT_MUTED, 'fontSize': '0.7rem', 'letterSpacing': '0.08em'}),
+        html.Div(title, className='sidebar-section-label mb-2'),
         *children,
     ], className='mb-3')
 
 
 def _label(text):
-    return html.Small(text, className='text-muted d-block mb-1')
+    return html.Small(text, className='text-muted d-block mb-1',
+                      style={'fontSize': '0.75rem'})
 
 
 def _card(*children, **kwargs):
     return dbc.Card(dbc.CardBody(list(children), className='p-2'),
                     className='mb-2',
-                    style={'background': CARD_BG, 'border': '1px solid #dddddd', **kwargs})
+                    style={'background': CARD_BG, 'border': f'1px solid {BORDER}',
+                           'borderRadius': '6px', **kwargs})
+
+
+def _panel_header(text, subtitle=None):
+    """Section header for tab panels."""
+    return html.Div([
+        html.H6(text, className='fw-semibold mb-0',
+                style={'fontSize': '0.9rem', 'color': '#202124'}),
+        html.Small(subtitle, className='text-muted', style={'fontSize': '0.75rem'})
+        if subtitle else html.Span(),
+    ], className='mb-2 mt-1')
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -58,39 +75,50 @@ def _navbar():
     return dbc.Navbar(
         dbc.Container([
             dbc.Row([
-                dbc.Col(html.Span([
-                    html.Span("Top-Down Proteomics Viewer",
+                dbc.Col(html.Div([
+                    html.Span("ProForm Viewer",
                               className='fw-bold',
-                              style={'fontSize': '1.05rem', 'color': '#111111',
-                                     'letterSpacing': '0.02em'}),
-                    dbc.Badge("v1.0", color='primary', className='ms-2 align-middle'),
+                              style={'fontSize': '1.1rem', 'color': '#202124',
+                                     'letterSpacing': '-0.01em'}),
+                    dbc.Badge("v1.0", color='primary', pill=True,
+                              className='ms-2 align-middle',
+                              style={'fontSize': '0.65rem', 'verticalAlign': 'middle'}),
                 ]), width='auto'),
-                dbc.Col(html.Small("Single-spectrum proteoform analysis",
-                                   style={'color': TEXT_MUTED}), width='auto'),
+                dbc.Col(
+                    html.Small("Top-Down Proteomics · Single-spectrum · One-protein Analysis",
+                               style={'color': TEXT_MUTED, 'fontSize': '0.75rem',
+                                      'fontWeight': '400'}),
+                    width='auto'),
             ], align='center', className='g-2 flex-grow-1'),
             dbc.Row([
-                dbc.Col(html.Div([
+                dbc.Col(
                     dcc.Dropdown(
                         id='demo-file-select',
                         options=_DEMO_OPTIONS,
-                        placeholder='Load Datasets…',
+                        placeholder='Select demo dataset…',
                         clearable=False,
-                        style={'minWidth': '220px', 'fontSize': '0.8rem', 'display': 'inline-block'},
+                        style={'minWidth': '235px', 'fontSize': '0.8rem'},
                     ),
-                ], style={'display': 'inline-block', 'verticalAlign': 'middle'}), width='auto'),
+                    width='auto'),
                 dbc.Col(dcc.Loading(
                     id='load-demo-loading',
-                    type='circle',
+                    type='dot',
                     color='#4CAF50',
                     children=dbc.Button('Load', id='load-demo-btn', color='success',
-                                       size='sm', outline=True, className='ms-1 me-2'),
+                                        size='sm', outline=True,
+                                        className='ms-1 me-1',
+                                        style={'fontWeight': '600', 'paddingLeft': '14px',
+                                               'paddingRight': '14px'}),
                 ), width='auto'),
-                dbc.Col(dbc.Button("Export", id='export-btn', color='secondary',
-                                   size='sm', outline=True), width='auto'),
+                dbc.Col(dbc.Button("⬇ Export", id='export-btn', color='secondary',
+                                   size='sm', outline=True,
+                                   style={'fontWeight': '500'}), width='auto'),
             ], align='center', className='g-1'),
         ], fluid=True),
         color='white', dark=False,
-        style={'borderBottom': '1px solid #dddddd', 'boxShadow': '0 1px 3px rgba(0,0,0,0.08)'},
+        style={'borderBottom': f'1px solid {BORDER}',
+               'boxShadow': '0 1px 4px rgba(60,64,67,0.10)',
+               'height': '58px'},
     )
 
 
@@ -333,11 +361,11 @@ def _sidebar():
         ),
 
     ], style={
-        'width': '270px', 'minWidth': '270px',
+        'width': '285px', 'minWidth': '285px',
         'background': SIDEBAR_BG,
-        'padding': '12px 12px',
-        'overflowY': 'auto', 'height': 'calc(100vh - 56px)',
-        'borderRight': '1px solid #dddddd',
+        'padding': '14px 14px',
+        'overflowY': 'auto', 'height': 'calc(100vh - 58px)',
+        'borderRight': f'1px solid {BORDER}',
         'flexShrink': '0',
     })
 
@@ -349,55 +377,93 @@ def _sidebar():
 def _tab_spectrum():
     return dbc.Tab(label='Spectrum', tab_id='tab-spectrum',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('MS Spectrum Viewer',
+                                     'Interactive annotated spectrum with matched fragment ions'),
+                       # ── Spectrum metrics pill bar ──────────────────────────────────
+                       html.Div(id='spectrum-stats-bar', className='mb-2'),
                        dcc.Loading(
                            id='loading-spectrum-graph',
-                           type='circle',
+                           type='dot',
                            color='#1a73e8',
                            children=dcc.Graph(id='spectrum-graph',
-                                             config={'displayModeBar': True},
-                                             style={'height': '520px'}),
+                                             config=_GRAPH_CONFIG,
+                                             style={'height': '620px'}),
                        ),
-                       html.Hr(style={'borderColor': '#dddddd'}),
                        html.Div(id='peak-click-info',
-                                style={'fontSize': '0.78rem', 'color': TEXT_MUTED}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Deconvolved Spectrum', className='text-muted small mb-1'),
+                                className='mt-2 p-2',
+                                style={'fontSize': '0.78rem', 'color': TEXT_MUTED,
+                                       'background': '#f8f9fa', 'borderRadius': '4px',
+                                       'minHeight': '28px'}),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '12px 0'}),
+                       _panel_header('Charge-Deconvolved Spectrum',
+                                     'Monoisotopic mass domain after isotope deconvolution'),
                        dcc.Loading(
                            id='loading-deconv-spectrum-graph',
-                           type='circle',
+                           type='dot',
                            color='#1a73e8',
                            children=dcc.Graph(id='deconv-spectrum-graph',
-                                             config={'displayModeBar': True},
-                                             style={'height': '360px'}),
+                                             config=_GRAPH_CONFIG,
+                                             style={'height': '420px'}),
                        ),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 def _tab_sequence():
     return dbc.Tab(label='Sequence', tab_id='tab-sequence',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('Proteoform Sequence Coverage',
+                                     'ProSight Lite–style residue-level fragment ion coverage map'),
                        # Proteoform mass summary header
                        html.Div(id='sequence-mass-header',
-                                className='mb-2 p-2',
-                                style={'background': '#f0f4ff',
-                                       'borderRadius': '4px',
-                                       'fontSize': '0.82rem',
-                                       'color': '#333333',
-                                       'borderLeft': '3px solid #1a73e8'}),
+                                className='mb-3 p-2',
+                                style={'background': '#e8f0fe',
+                                       'borderRadius': '6px',
+                                       'fontSize': '0.83rem',
+                                       'color': '#1557b0',
+                                       'borderLeft': '4px solid #1a73e8',
+                                       'minHeight': '30px'}),
                        dbc.Row([
-                           dbc.Col(dbc.Switch(id='show-cleavage', value=True,
-                                              label='Show cleavage ticks'), width='auto'),
+                           dbc.Col([
+                               dbc.Switch(id='show-cleavage', value=True,
+                                          label='Cleavage ticks'),
+                           ], width='auto'),
                            dbc.Col(html.Div(id='coverage-display',
-                                            style={'fontSize': '0.82rem', 'color': '#333333'}),
+                                            style={'fontSize': '0.83rem', 'color': '#202124',
+                                                   'fontWeight': '500'}),
                                    width='auto'),
-                       ], className='mb-2 align-items-center'),
+                           dbc.Col([
+                               _label('Residues / row'),
+                               dcc.Dropdown(
+                                   id='seq-residues-per-row',
+                                   options=[{'label': str(n), 'value': n}
+                                            for n in [10, 15, 20, 25, 30]],
+                                   value=20,
+                                   clearable=False,
+                                   style={'width': '80px', 'fontSize': '0.78rem'},
+                               ),
+                           ], width='auto'),
+                           dbc.Col([
+                               _label('Focus mass (Da)'),
+                               dbc.InputGroup([
+                                   dbc.Input(id='seq-focus-mass', type='number', step=0.001,
+                                             placeholder='e.g. 8564.8',
+                                             size='sm',
+                                             style={'width': '130px', 'background': '#fff',
+                                                    'color': '#202124',
+                                                    'border': f'1px solid {BORDER}'}),
+                                   dbc.Button('▶', id='seq-focus-mass-btn',
+                                              size='sm', color='primary', outline=True),
+                               ], size='sm'),
+                           ], width='auto'),
+                       ], className='mb-3 align-items-end'),
                        dcc.Loading(
                            id='loading-sequence-graph',
-                           type='circle',
+                           type='dot',
                            color='#1a73e8',
                            children=dcc.Graph(id='sequence-graph',
                                  config={
                                      'displayModeBar': True,
+                                     'displaylogo': False,
                                      'modeBarButtonsToRemove': [
                                          'zoom2d', 'pan2d', 'select2d', 'lasso2d',
                                          'zoomIn2d', 'zoomOut2d', 'autoScale2d',
@@ -405,103 +471,160 @@ def _tab_sequence():
                                          'hoverClosestCartesian', 'hoverCompareCartesian',
                                      ],
                                      'toImageButtonOptions': {
-                                         'format': 'svg',
+                                         'format': 'svg', 'scale': 2,
                                          'filename': 'sequence_coverage',
                                      },
                                  },
-                                 style={'minHeight': '300px'}),
+                                 style={'minHeight': '340px'}),
                        ),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 def _tab_mirror():
     return dbc.Tab(label='Mirror Plot', tab_id='tab-mirror',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('Mirror Plot — Theoretical vs Experimental',
+                                     'Compare predicted fragment ions against the measured spectrum'),
                        dbc.Row([
                            dbc.Col([
-                               _label("m/z range — Min"),
+                               _label('m/z range — Min'),
                                dbc.Input(id='mirror-mz-min', type='number', value=200,
                                          size='sm',
-                                         style={'background': '#ffffff', 'color': '#111111',
-                                                'border': '1px solid #cccccc'}),
+                                         style={'background': '#ffffff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
                            ], width=2),
                            dbc.Col([
-                               _label("m/z range — Max"),
+                               _label('m/z range — Max'),
                                dbc.Input(id='mirror-mz-max', type='number', value=2000,
                                          size='sm',
-                                         style={'background': '#ffffff', 'color': '#111111',
-                                                'border': '1px solid #cccccc'}),
+                                         style={'background': '#ffffff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
                            ], width=2),
-                       ], className='mb-2'),
-                       dcc.Graph(id='mirror-graph', config={'displayModeBar': True},
-                                 style={'height': '560px'}),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                           dbc.Col([
+                               _label('User Neutral Mass (Da)'),
+                               dbc.InputGroup([
+                                   dbc.Input(id='mirror-user-mass', type='number', step=0.001,
+                                             placeholder='e.g. 8564.83',
+                                             size='sm',
+                                             style={'background': '#fff', 'color': '#202124',
+                                                    'border': f'1px solid {BORDER}'}),
+                                   dbc.Button('▶', id='mirror-annotate-btn',
+                                              size='sm', color='primary', outline=True,
+                                              title='Annotate charge series'),
+                               ], size='sm'),
+                           ], width=3),
+                           dbc.Col([
+                               _label('Max z'),
+                               dbc.Input(id='mirror-user-charge-max', type='number', value=15,
+                                         min=1, max=30, size='sm',
+                                         style={'background': '#fff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
+                           ], width=1),
+                           dbc.Col([
+                               _label(' '),
+                               html.Div(id='mirror-user-mass-display',
+                                        style={'fontSize': '0.75rem', 'color': TEXT_MUTED,
+                                               'paddingTop': '4px'}),
+                           ], width=4),
+                       ], className='mb-3 align-items-end g-2'),
+                       dcc.Loading(
+                           id='loading-mirror-graph',
+                           type='dot', color='#1a73e8',
+                           children=dcc.Graph(id='mirror-graph', config=_GRAPH_CONFIG,
+                                             style={'height': '700px'}),
+                       ),
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 def _tab_features():
     return dbc.Tab(label='Feature Map', tab_id='tab-features',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('Feature Map — m/z × Retention Time',
+                                     'Quantitative feature visualization with theoretical overlay'),
                        dbc.Row([
                            dbc.Col([
                                _label("Color by"),
                                dbc.RadioItems(
                                    id='feature-color-by',
-                                   options=[{'label': 'Charge', 'value': 'charge'},
-                                            {'label': 'Proteoform', 'value': 'proteoform'}],
+                                   options=[{'label': 'Charge state', 'value': 'charge'},
+                                            {'label': 'Proteoform ID', 'value': 'proteoform'}],
                                    value='charge',
                                    inline=True, className='small',
                                ),
                            ], width='auto'),
                            dbc.Col([
-                               _label("Feature ID filter"),
+                               _label("Filter by Feature ID"),
                                dbc.Input(id='feature-filter', placeholder='e.g. F001',
                                          size='sm',
-                                         style={'background': '#ffffff', 'color': '#111111',
-                                                'border': '1px solid #cccccc'}),
+                                         style={'background': '#ffffff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
                            ], width=3),
-                       ], className='mb-2 align-items-end'),
-                       dcc.Graph(id='feature-map-graph', config={'displayModeBar': True},
-                                 style={'height': '480px'}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Extracted Ion Chromatogram (XIC)',
-                               className='text-muted small mb-1',
-                               id='xic-label'),
-                       dcc.Graph(id='xic-graph', config={'displayModeBar': True},
-                                 style={'height': '280px'}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       dbc.Row([
                            dbc.Col([
-                               _label("Theoretical mass for overlay (Da)"),
+                               _label("Theoretical mass (Da)"),
                                dbc.Input(id='th-mass-input', type='number', step=0.001,
                                          placeholder='e.g. 8564.83',
                                          size='sm',
-                                         style={'background': '#ffffff', 'color': '#111111',
-                                                'border': '1px solid #cccccc'}),
+                                         style={'background': '#ffffff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
                            ], width=3),
                            dbc.Col([
                                _label("Charge for trace"),
                                dbc.Input(id='th-charge-input', type='number', value=10, min=1,
                                          size='sm',
-                                         style={'background': '#ffffff', 'color': '#111111',
-                                                'border': '1px solid #cccccc'}),
+                                         style={'background': '#ffffff', 'color': '#202124',
+                                                'border': f'1px solid {BORDER}'}),
                            ], width=2),
-                       ], className='mb-2'),
+                       ], className='mb-3 align-items-end g-2'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='feature-map-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '560px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Extracted Ion Chromatogram (XIC)',
+                                     'XIC extracted from MS1 scans for selected feature'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='xic-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '300px'})
+                       ),
+                       html.Div(id='xic-label',
+                                className='mb-1 mt-2',
+                                style={'fontSize': '0.8rem', 'color': TEXT_MUTED,
+                                       'fontWeight': '500'}),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Elution Profile \u2014 Intensity Trace',
+                                     'Gaussian-approximated elution trace for selected feature with theoretical overlay'),
                        dcc.Graph(id='intensity-trace-graph', config={'displayModeBar': False},
-                                 style={'height': '300px'}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Feature 3D Plot — RT × Charge × Intensity',
-                               className='text-muted small mt-2'),
-                       dcc.Graph(id='feature-3d-graph', config={'displayModeBar': True},
-                                 style={'height': '520px'}),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                                 style={'height': '320px'}),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Theoretical vs Observed — Isotope Envelope & Elution',
+                                     'Isotope pattern mirror (top) and normalised elution profile overlay (bottom)'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='comparison-panel-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '600px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Mass Accuracy Map',
+                                     'PPM error distribution of observed feature masses vs theoretical'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='mass-accuracy-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '320px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Feature 3D Plot — RT × Charge × Intensity',
+                                     '3D scatter for multi-dimensional quantitative overview'),
+                       dcc.Graph(id='feature-3d-graph', config=_GRAPH_CONFIG,
+                                 style={'height': '580px'}),
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 def _tab_heatmap():
     return dbc.Tab(label='MS Heatmap', tab_id='tab-heatmap',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('MS Chromatographic Heatmaps',
+                                     'RT × m/z (raw) and RT × neutral mass (deconvolved) intensity maps'),
                        dbc.Row([
                            dbc.Col([
-                               _label('MS Level'),
+                               _label('MS Level filter'),
                                dbc.RadioItems(
                                    id='heatmap-ms-level',
                                    options=[
@@ -512,16 +635,21 @@ def _tab_heatmap():
                                    value=2, inline=True, className='small',
                                ),
                            ], width='auto'),
-                       ], className='mb-2'),
-                       html.H6('Raw MS Heatmap', className='text-muted small'),
-                       dcc.Graph(id='raw-heatmap-graph', config={'displayModeBar': True},
-                                 style={'height': '450px'}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Deconvolved (Precursor Mass) Heatmap',
-                               className='text-muted small mt-2'),
-                       dcc.Graph(id='deconv-heatmap-graph', config={'displayModeBar': True},
-                                 style={'height': '450px'}),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                       ], className='mb-3'),
+                       html.H6('Raw MS Heatmap (m/z × RT)',
+                               className='text-muted fw-semibold small mb-1'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='raw-heatmap-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '520px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       html.H6('Deconvolved Precursor-Mass Heatmap (Neutral Mass × RT)',
+                               className='text-muted fw-semibold small mt-1 mb-1'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='deconv-heatmap-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '520px'})
+                       ),
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 def _tab_search():
@@ -544,9 +672,11 @@ def _tab_search():
     ]
     return dbc.Tab(label='Search Results', tab_id='tab-search',
                    children=dbc.Card(dbc.CardBody([
+                       _panel_header('Proteoform Search Results',
+                                     'Ranked candidates with mass accuracy, coverage, and PTM annotations'),
                        html.Div(id='search-result-summary',
                                 className='mb-2',
-                                style={'fontSize': '0.8rem', 'color': TEXT_MUTED}),
+                                style={'fontSize': '0.82rem', 'color': TEXT_MUTED}),
                        dash_table.DataTable(
                            id='results-table',
                            columns=columns,
@@ -557,21 +687,22 @@ def _tab_search():
                            style_table={'overflowX': 'auto'},
                            style_cell={
                                'backgroundColor': '#ffffff',
-                               'color': '#111111',
-                               'border': '1px solid #dddddd',
+                               'color': '#202124',
+                               'border': f'1px solid {BORDER}',
                                'fontSize': '0.78rem',
-                               'padding': '5px 8px',
+                               'padding': '6px 10px',
                                'whiteSpace': 'normal',
                                'maxWidth': '220px',
                                'overflow': 'hidden',
                                'textOverflow': 'ellipsis',
                            },
                            style_header={
-                               'backgroundColor': '#f0f0f0',
-                               'color': '#111111',
-                               'fontWeight': 'bold',
-                               'border': '1px solid #dddddd',
+                               'backgroundColor': '#f8f9fa',
+                               'color': '#202124',
+                               'fontWeight': '600',
+                               'border': f'1px solid {BORDER}',
                                'fontSize': '0.75rem',
+                               'borderBottom': f'2px solid {BORDER}',
                            },
                            style_data_conditional=[
                                {'if': {'row_index': 0},
@@ -580,10 +711,10 @@ def _tab_search():
                                {'if': {'state': 'selected'},
                                 'backgroundColor': '#d2e3fc',
                                 'border': '1px solid #1a73e8'},
-                               # Highlight q-value column: green < 0.01, yellow < 0.05
                                {'if': {'filter_query': '{q_value} < 0.01', 'column_id': 'q_value'},
                                 'color': '#2e7d32', 'fontWeight': 'bold'},
-                               {'if': {'filter_query': '{q_value} >= 0.01 && {q_value} < 0.05', 'column_id': 'q_value'},
+                               {'if': {'filter_query': '{q_value} >= 0.01 && {q_value} < 0.05',
+                                       'column_id': 'q_value'},
                                 'color': '#f57f17'},
                            ],
                            tooltip_data=[],
@@ -591,21 +722,36 @@ def _tab_search():
                            sort_action='native',
                            filter_action='native',
                        ),
-                       # Inline row-detail expansion (Mass / Start / End / Description)
                        html.Div(
                            id='result-row-detail',
                            style={
                                'display': 'none',
                                'backgroundColor': '#e8f0fe',
                                'borderLeft': '3px solid #1a73e8',
-                               'borderBottom': '1px solid #b0c4de',
-                               'padding': '7px 14px',
-                               'marginBottom': '6px',
+                               'borderBottom': f'1px solid #b0c4de',
+                               'padding': '8px 16px',
+                               'marginBottom': '8px',
                                'fontSize': '0.78rem',
-                               'borderRadius': '0 0 4px 0',
+                               'borderRadius': '0 0 6px 0',
                            },
                        ),
-                       html.Hr(style={'borderColor': '#dddddd'}),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       # ── FLASHTnT-style Truncation & Modification Ladder ────────
+                       _panel_header('FLASHTnT — Truncation & Modification Ladder',
+                                     'One-spectrum, one-protein: all candidate truncations and modifications ranked by tag score'),
+                       html.Small(
+                           'Each bar spans the matched sequence range (start → end positions). '
+                           'Green = N-terminal truncation, Red = C-terminal truncation, '
+                           'Purple = internal fragment, Gold star = PTM site. '
+                           'Select a row above to highlight the corresponding candidate.',
+                           className='text-muted d-block mb-2',
+                           style={'fontSize': '0.75rem', 'lineHeight': '1.5'},
+                       ),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='truncation-ladder-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '420px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
                        html.Div(id='fragment-stats-header', className='mb-1'),
                        dash_table.DataTable(
                            id='ion-table',
@@ -623,16 +769,16 @@ def _tab_search():
                            style_table={'overflowX': 'auto'},
                            style_cell={
                                'backgroundColor': '#ffffff',
-                               'color': '#111111',
-                               'border': '1px solid #dddddd',
+                               'color': '#202124',
+                               'border': f'1px solid {BORDER}',
                                'fontSize': '0.75rem',
-                               'padding': '4px 8px',
+                               'padding': '5px 10px',
                            },
                            style_header={
-                               'backgroundColor': '#f0f0f0',
-                               'color': '#111111',
-                               'fontWeight': 'bold',
-                               'border': '1px solid #dddddd',
+                               'backgroundColor': '#f8f9fa',
+                               'color': '#202124',
+                               'fontWeight': '600',
+                               'border': f'1px solid {BORDER}',
                                'fontSize': '0.73rem',
                            },
                            style_data_conditional=[
@@ -642,15 +788,90 @@ def _tab_search():
                            sort_action='native',
                            filter_action='native',
                        ),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Score Distribution', className='text-muted small mb-1'),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Score Distribution',
+                                     'Histogram of all candidate scores'),
                        dcc.Graph(id='score-dist-graph', config={'displayModeBar': False},
-                                 style={'height': '220px'}),
-                       html.Hr(style={'borderColor': '#dddddd'}),
-                       html.H6('Internal Fragment Map', className='text-muted small mb-1'),
-                       dcc.Graph(id='internal-frag-graph', config={'displayModeBar': True},
-                                 style={'height': '420px'}),
-                   ], className='p-2'), style={'background': CARD_BG, 'border': 'none'}))
+                                 style={'height': '260px'}),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Target-Decoy Score Distribution & FDR Curve',
+                                     'Score histogram (target vs decoy) + cumulative q-value; '
+                                     'shaded region = identifications at 1 % FDR'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='fdr-curve-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '320px'})
+                       ),
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+                       _panel_header('Internal Fragment Map',
+                                     '2D dot map of matched internal fragment ions (start × end position)'),
+                       dcc.Graph(id='internal-frag-graph', config=_GRAPH_CONFIG,
+                                 style={'height': '500px'}),
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Diagnostics Tab
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _tab_diagnostics():
+    return dbc.Tab(label='Diagnostics', tab_id='tab-diagnostics',
+                   children=dbc.Card(dbc.CardBody([
+                       _panel_header('Diagnostic Dashboard',
+                                     'Spectrum QC, TIC browser, precursor envelope, '
+                                     'ion breakdown, sequence tag map'),
+
+                       # ── TIC ───────────────────────────────────────────────
+                       _panel_header('Total Ion Chromatogram',
+                                     'Click any point to select that scan across all tabs'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='tic-graph', config=_GRAPH_CONFIG,
+                                     style={'height': '240px'})
+                       ),
+
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+
+                       # ── QC + precursor envelope (side-by-side) ────────────
+                       dbc.Row([
+                           dbc.Col([
+                               _panel_header('Spectral QC Panel',
+                                             'Dynamic range · matched-ion ppm errors · '
+                                             'Δm/z spacing · intensity waterfall'),
+                               dcc.Loading(type='dot', color='#1a73e8', children=
+                                   dcc.Graph(id='diag-qc-graph', config=_GRAPH_CONFIG,
+                                             style={'height': '500px'})
+                               ),
+                           ], md=8),
+                           dbc.Col([
+                               _panel_header('Precursor Isotope Envelope',
+                                             'Zoom on precursor cluster with theoretical annotations'),
+                               dcc.Loading(type='dot', color='#1a73e8', children=
+                                   dcc.Graph(id='diag-precursor-envelope',
+                                             config=_GRAPH_CONFIG,
+                                             style={'height': '270px'})
+                               ),
+                               html.Hr(style={'borderColor': BORDER, 'margin': '12px 0'}),
+                               _panel_header('Fragment Ion Type Breakdown',
+                                             'Matched-ion count by type and charge state'),
+                               dcc.Loading(type='dot', color='#1a73e8', children=
+                                   dcc.Graph(id='diag-ion-breakdown',
+                                             config={'displayModeBar': False},
+                                             style={'height': '210px'})
+                               ),
+                           ], md=4),
+                       ], className='mb-2 g-3'),
+
+                       html.Hr(style={'borderColor': BORDER, 'margin': '14px 0'}),
+
+                       # ── Sequence tag map ──────────────────────────────────
+                       _panel_header('Sequence Tag Map',
+                                     'Consecutive matched-ion runs (b/c lane & y/z lane) '
+                                     '— longer unbroken bars = higher quality identifications'),
+                       dcc.Loading(type='dot', color='#1a73e8', children=
+                           dcc.Graph(id='diag-seq-tag-map', config=_GRAPH_CONFIG,
+                                     style={'height': '220px'})
+                       ),
+
+                   ], className='p-3'), style={'background': CARD_BG, 'border': 'none'}))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -659,7 +880,8 @@ def _tab_search():
 
 def _export_modal():
     return dbc.Modal([
-        dbc.ModalHeader(dbc.ModalTitle("Export Results")),
+        dbc.ModalHeader(dbc.ModalTitle("Export Results"),
+                        style={'borderBottom': f'1px solid {BORDER}'}),
         dbc.ModalBody([
             _label("Export Format"),
             dbc.RadioItems(
@@ -672,14 +894,16 @@ def _export_modal():
                 ],
                 value='csv_results',
                 className='small',
+                inputStyle={'marginRight': '6px'},
             ),
-        ]),
+        ], style={'padding': '20px'}),
         dbc.ModalFooter([
-            dbc.Button("Download", id='export-confirm-btn', color='primary', size='sm'),
+            dbc.Button("Download", id='export-confirm-btn', color='primary', size='sm',
+                       style={'fontWeight': '600', 'paddingLeft': '18px', 'paddingRight': '18px'}),
             dbc.Button("Close",    id='export-close-btn',  color='secondary',
                        size='sm', className='ms-2', outline=True),
         ]),
-    ], id='export-modal', is_open=False)
+    ], id='export-modal', is_open=False, size='md')
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -699,6 +923,8 @@ def _stores():
         dcc.Store(id='store-nterm-mod',          storage_type='session',
                   data={'name': 'No Modification', 'mass_shift': 0.0}),
         dcc.Download(id='download-data'),
+        # Hidden labels needed by callbacks
+        html.Div(id='comparison-panel-label', style={'display': 'none'}),
     ])
 
 
@@ -714,6 +940,7 @@ def create_layout():
         _tab_mirror(),
         _tab_features(),
         _tab_search(),
+        _tab_diagnostics(),
     ], id='main-tabs', active_tab='tab-spectrum',
     className='mb-0',
     style={'background': '#ffffff'})
@@ -722,9 +949,10 @@ def create_layout():
         tabs,
     ], style={
         'flex': '1',
-        'padding': '8px 12px',
+        'padding': '10px 14px',
         'overflowY': 'auto',
-        'height': 'calc(100vh - 56px)',
+        'height': 'calc(100vh - 58px)',
+        'background': '#f4f5f7',
     })
 
     body = html.Div([
@@ -733,7 +961,7 @@ def create_layout():
     ], style={
         'display': 'flex',
         'flexDirection': 'row',
-        'height': 'calc(100vh - 56px)',
+        'height': 'calc(100vh - 58px)',
     })
 
     return html.Div([
@@ -741,14 +969,15 @@ def create_layout():
         _navbar(),
         body,
         _export_modal(),
-        # Status toast
         dbc.Toast(
             id='status-toast',
-            header="ProForm Viewer",
+            header='ProForm Viewer',
             is_open=False,
             dismissable=True,
-            duration=4000,
-            style={'position': 'fixed', 'bottom': '20px', 'right': '20px',
-                   'background': CARD_BG, 'color': 'white', 'zIndex': 9999},
+            duration=4500,
+            style={'position': 'fixed', 'bottom': '24px', 'right': '24px',
+                   'background': '#ffffff', 'zIndex': 9999,
+                   'boxShadow': '0 4px 12px rgba(60,64,67,0.20)',
+                   'borderRadius': '8px', 'minWidth': '280px'},
         ),
-    ], style={'background': '#ffffff', 'minHeight': '100vh'})
+    ], style={'background': '#f4f5f7', 'minHeight': '100vh'})

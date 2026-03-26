@@ -17,7 +17,7 @@ import plotly.graph_objects as go
 from ..data.models import Proteoform, FragmentIon, Modification
 from ..analysis.peak_matching import coverage_map, coverage_count_map
 
-RESIDUES_PER_ROW = 20
+RESIDUES_PER_ROW = 20  # default; may be overridden by caller
 DARK_BG  = '#ffffff'
 PLOT_BG  = '#ffffff'
 
@@ -48,7 +48,8 @@ def _depth_idx(n: int) -> int:
 
 def create_sequence_plot(proteoform: Proteoform,
                           matched_ions: Optional[List[FragmentIon]] = None,
-                          show_cleavage: bool = True) -> go.Figure:
+                          show_cleavage: bool = True,
+                          residues_per_row: int = RESIDUES_PER_ROW) -> go.Figure:
     """
     Draw the sequence coverage grid plot.
     """
@@ -65,7 +66,7 @@ def create_sequence_plot(proteoform: Proteoform,
         return fig
 
     n_aa     = len(seq)
-    n_rows   = (n_aa + RESIDUES_PER_ROW - 1) // RESIDUES_PER_ROW
+    n_rows   = (n_aa + residues_per_row - 1) // residues_per_row
     cov      = coverage_map(seq, matched_ions or [])
     cov_cnt  = coverage_count_map(seq, matched_ions or [])
 
@@ -78,8 +79,8 @@ def create_sequence_plot(proteoform: Proteoform,
     # Build grid coordinates
     xs, ys, colors, border_colors, labels, hovers = [], [], [], [], [], []
     for i, aa in enumerate(seq):
-        col = i % RESIDUES_PER_ROW
-        row = i // RESIDUES_PER_ROW
+        col = i % residues_per_row
+        row = i // residues_per_row
         xs.append(col)
         ys.append(-row)
         labels.append(aa)
@@ -155,14 +156,14 @@ def create_sequence_plot(proteoform: Proteoform,
             if not ion.matched:
                 continue
             if ion.ion_type in ('b', 'c', 'a') and ion.charge == 1:
-                cleavage_b.add(ion.position)     # cleavage after position ion.position
+                cleavage_b.add(ion.position)
             elif ion.ion_type in ('y', 'z') and ion.charge == 1:
-                cleavage_y.add(n_aa - ion.position)  # 0-based left boundary
+                cleavage_y.add(n_aa - ion.position)
 
         for pos in cleavage_b:
             if 0 < pos < n_aa:
-                col = (pos - 1) % RESIDUES_PER_ROW
-                row = (pos - 1) // RESIDUES_PER_ROW
+                col = (pos - 1) % residues_per_row
+                row = (pos - 1) // residues_per_row
                 fig.add_shape(type='line',
                     x0=col + 0.48, x1=col + 0.48,
                     y0=-row - 0.42, y1=-row + 0.42,
@@ -170,8 +171,8 @@ def create_sequence_plot(proteoform: Proteoform,
 
         for pos in cleavage_y:
             if 0 < pos < n_aa:
-                col = (pos - 1) % RESIDUES_PER_ROW
-                row = (pos - 1) // RESIDUES_PER_ROW
+                col = (pos - 1) % residues_per_row
+                row = (pos - 1) // residues_per_row
                 fig.add_shape(type='line',
                     x0=col + 0.48, x1=col + 0.48,
                     y0=-row - 0.42, y1=-row + 0.42,
@@ -181,7 +182,7 @@ def create_sequence_plot(proteoform: Proteoform,
     for row_i in range(n_rows):
         fig.add_annotation(
             x=-1.2, y=-row_i,
-            text=str(row_i * RESIDUES_PER_ROW + 1),
+            text=str(row_i * residues_per_row + 1),
             showarrow=False,
             font=dict(color='#888888', size=9),
             xanchor='right',
@@ -299,5 +300,138 @@ def create_internal_fragment_map(
                     font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
         margin=dict(l=65, r=20, t=75, b=55),
         height=420,
+    )
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Truncation Ladder (FLASHTnT-style horizontal bar chart)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def create_truncation_ladder(results: list, protein_sequence: str = '') -> go.Figure:
+    """
+    Visualise candidate truncations as a horizontal 'ladder' plot.
+
+    Each bar spans from start_pos to end_pos along the full protein sequence.
+    Bars are coloured by truncation type:
+      N-terminal truncation  → green
+      C-terminal truncation  → red
+      Internal fragment      → purple
+      Full-length            → blue
+
+    Opacity encodes score (higher score → more opaque).
+    Hover shows: proteoform name, mass, score, matched ions, ppm error.
+    """
+    fig = go.Figure()
+
+    if not results:
+        fig.update_layout(
+            template='plotly_white',
+            title='Run a search to see the truncation ladder',
+            paper_bgcolor='#ffffff', plot_bgcolor='#ffffff',
+            font=dict(color='#aaaaaa'),
+            height=420,
+            margin=dict(l=60, r=20, t=50, b=45),
+        )
+        return fig
+
+    n_full = len(protein_sequence) if protein_sequence else 0
+
+    _COLORS = {
+        'N-term': '#43A047',
+        'C-term': '#E53935',
+        'Internal': '#8E24AA',
+        'Full':     '#1a73e8',
+    }
+
+    max_score = max((r.get('proteoform', {}).get('score', 0) for r in results), default=1) or 1
+    seen_legend = set()
+
+    for rank, r in enumerate(results):
+        pf   = r.get('proteoform', {})
+        s0   = int(pf.get('start_pos', 0))
+        s1   = int(pf.get('end_pos',   0)) or n_full
+        score = float(pf.get('score', 0))
+        name  = pf.get('protein_name', f'Candidate {rank + 1}')
+        seq   = pf.get('sequence', '')
+        th_m  = pf.get('theoretical_mass', 0)
+        ppm   = pf.get('mass_error_ppm', 0)
+        matched = pf.get('matched_ions', 0)
+        total   = pf.get('total_ions', 0)
+
+        # Classify truncation type
+        is_nterm_short = s0 > 1
+        is_cterm_short = n_full > 0 and s1 < n_full
+        if is_nterm_short and is_cterm_short:
+            ttype = 'Internal'
+        elif is_nterm_short:
+            ttype = 'N-term'
+        elif is_cterm_short:
+            ttype = 'C-term'
+        else:
+            ttype = 'Full'
+
+        opacity = 0.35 + 0.65 * (score / max_score)
+        color   = _COLORS[ttype]
+        show_in_legend = ttype not in seen_legend
+        seen_legend.add(ttype)
+
+        hover_res = f'Residues: {s0}–{s1}'
+        fig.add_trace(go.Bar(
+            orientation='h',
+            x=[s1 - s0],
+            base=[s0],
+            y=[rank],
+            marker=dict(color=color, opacity=opacity,
+                        line=dict(color='rgba(0,0,0,0.15)', width=0.8)),
+            name=ttype,
+            legendgroup=ttype,
+            showlegend=show_in_legend,
+            customdata=[[name, th_m, score, matched, total, ppm, seq[:20], hover_res]],
+            hovertemplate=(
+                '<b>Rank %{y}</b><br>'
+                'Protein: %{customdata[0][0]}<br>'
+                '%{customdata[0][7]}<br>'
+                'Mass: %{customdata[0][1]:.4f} Da<br>'
+                'Score: %{customdata[0][2]:.2f}<br>'
+                'Matched ions: %{customdata[0][3]}/%{customdata[0][4]}<br>'
+                '\u0394mass: %{customdata[0][5]:+.2f} ppm<br>'
+                'Seq: %{customdata[0][6]}\u2026'
+                '<extra></extra>'
+            ),
+        ))
+
+    fig.update_layout(
+        template='plotly_white',
+        title=dict(text='<b>Truncation Ladder</b> — Protein Coverage by Candidate',
+                   font=dict(size=12)),
+        xaxis=dict(
+            title='Sequence Position',
+            range=[0, max(n_full, 1)],
+            showgrid=True,
+            gridcolor='rgba(0,0,0,0.07)',
+            automargin=True,
+        ),
+        yaxis=dict(
+            title='Candidate Rank',
+            autorange='reversed',
+            showgrid=False,
+            tickmode='linear',
+            dtick=1,
+            automargin=True,
+        ),
+        barmode='overlay',
+        paper_bgcolor='#ffffff',
+        plot_bgcolor='#ffffff',
+        font=dict(color='#111111'),
+        showlegend=True,
+        legend=dict(
+            title=dict(text='Type', font=dict(size=10)),
+            font=dict(size=10),
+            orientation='h', yanchor='bottom', y=1.02, x=0,
+            bgcolor='rgba(255,255,255,0.8)',
+        ),
+        height=420,
+        margin=dict(l=55, r=20, t=75, b=55),
     )
     return fig

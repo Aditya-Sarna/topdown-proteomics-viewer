@@ -18,9 +18,12 @@ def register_callbacks(app):
         Input('store-selected-result', 'data'),
         Input('store-protein', 'data'),
         Input('show-cleavage', 'value'),
+        Input('seq-residues-per-row', 'value'),
         State('store-matched-ions', 'data'),
+        State('seq-focus-mass', 'value'),
     )
-    def update_sequence(selected_result, prot_data, show_cleavage, ions_data):
+    def update_sequence(selected_result, prot_data, show_cleavage, residues_per_row,
+                        ions_data, focus_mass):
         ions = ([FragmentIon.from_dict(d) for d in ions_data]
                 if ions_data else [])
 
@@ -36,7 +39,9 @@ def register_callbacks(app):
         else:
             pf = Proteoform(sequence='', protein_name='')
 
-        fig = create_sequence_plot(pf, ions, show_cleavage=bool(show_cleavage))
+        rpr = int(residues_per_row) if residues_per_row else 20
+        fig = create_sequence_plot(pf, ions, show_cleavage=bool(show_cleavage),
+                                   residues_per_row=rpr)
 
         # Coverage text — use vectorized coverage_count_map (numpy) instead of
         # coverage_map (Python loops), avoiding a redundant O(N×M) pass.
@@ -48,6 +53,37 @@ def register_callbacks(app):
             cov_text = f"Sequence coverage: {n_cov}/{len(pf.sequence)} aa ({pct:.1f}%)"
         else:
             cov_text = ''
+
+        # Focus mass: annotate sequence plot if a user mass is entered
+        if focus_mass and pf.sequence:
+            try:
+                fm = float(focus_mass)
+                if fm > 0:
+                    from src.analysis.mass_utils import calc_sequence_mass
+                    best_pos, best_err = None, 1e9
+                    seq = pf.sequence
+                    for i in range(len(seq)):
+                        for j in range(i + 1, len(seq) + 1):
+                            sub_mass = calc_sequence_mass(seq[i:j])
+                            err = abs(sub_mass - fm) / fm * 1e6
+                            if err < best_err:
+                                best_err, best_pos = err, (i, j)
+                    if best_pos is not None and best_err < 50:  # 50 ppm threshold
+                        i0, i1 = best_pos
+                        col0 = i0 % rpr
+                        row0 = i0 // rpr
+                        col1 = (i1 - 1) % rpr
+                        row1 = (i1 - 1) // rpr
+                        fig.add_annotation(
+                            x=(col0 + col1) / 2,
+                            y=-(row0 + row1) / 2 + 0.65,
+                            text=f"⬆ {fm:.1f} Da (Δ{best_err:.1f} ppm)",
+                            showarrow=False,
+                            font=dict(color='#e65100', size=9, family='Arial'),
+                            xanchor='center',
+                        )
+            except (ValueError, TypeError):
+                pass
 
         # Sequence-view mass header
         if pf.sequence and (pf.theoretical_mass or pf.observed_mass):

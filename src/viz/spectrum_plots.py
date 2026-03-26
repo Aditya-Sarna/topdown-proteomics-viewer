@@ -179,7 +179,8 @@ def create_spectrum_plot(spectrum: Spectrum,
         hovermode='closest',
         legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
                     font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
-        margin=dict(l=60, r=20, t=95, b=50),
+        margin=dict(l=65, r=25, t=100, b=60),
+        height=620,
     )
     return fig
 
@@ -236,7 +237,7 @@ def create_deconvolved_spectrum_plot(spectrum: Spectrum) -> go.Figure:
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
         font=dict(color='#111111'),
         showlegend=False,
-        margin=dict(l=60, r=20, t=75, b=50),
-        height=380,
+        margin=dict(l=65, r=25, t=80, b=55),
+        height=420,
     )
     return fig

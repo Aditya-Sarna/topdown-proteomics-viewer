@@ -497,3 +497,16 @@ def register_callbacks(app):
                           style={'color': '#111111', 'wordBreak': 'break-word'}),
             ], width=True),
         ], className='gx-2 align-items-start flex-wrap'), _visible
+
+    # ── Truncation Ladder (FLASHTnT-style) ─────────────────────────────────
+    @app.callback(
+        Output('truncation-ladder-graph', 'figure'),
+        Input('store-search-results', 'data'),
+        Input('store-protein', 'data'),
+    )
+    def update_truncation_ladder(results_data, prot_data):
+        from src.viz.sequence_plots import create_truncation_ladder
+        protein_seq = ''
+        if prot_data:
+            protein_seq = prot_data.get('sequence', '')
+        return create_truncation_ladder(results_data or [], protein_seq)

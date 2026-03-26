@@ -29,7 +29,8 @@ def _sticks(mz_list, height=100.0):
 
 def create_mirror_plot(spectrum: Spectrum,
                         matched_ions: Optional[List[FragmentIon]] = None,
-                        mz_range: Optional[tuple] = None) -> go.Figure:
+                        mz_range: Optional[tuple] = None,
+                        user_mass_annotation: Optional[dict] = None) -> go.Figure:
     """
     Mirror plot with shared x-axis.
     Top panel  → theoretical fragment ions (stick, coloured by type).
@@ -180,6 +181,37 @@ def create_mirror_plot(spectrum: Spectrum,
                   y0=0, y1=0, yref='y2',
                   line=dict(color='rgba(0,0,0,0.15)', width=1))
 
+    # ── User-defined neutral mass charge series annotation ─────────────────
+    if user_mass_annotation:
+        mass_val   = user_mass_annotation['mass']
+        charge_mzs = user_mass_annotation['charge_mzs']
+        ann_x, ann_text = [], []
+        for z, mz_val in charge_mzs:
+            if mz_range[0] <= mz_val <= mz_range[1]:
+                # Draw a semi-transparent orange vline on both panels
+                for row_i in [1, 2]:
+                    fig.add_shape(
+                        type='line',
+                        x0=mz_val, x1=mz_val,
+                        y0=0, y1=(110 if row_i == 1 else -100),
+                        xref='x', yref=f'y{row_i}' if row_i > 1 else 'y',
+                        line=dict(color='rgba(255,152,0,0.55)', width=1.2, dash='dash'),
+                    )
+                ann_x.append(mz_val)
+                ann_text.append(f'z={z}')
+        if ann_x:
+            # Labels in top panel
+            fig.add_trace(go.Scatter(
+                x=ann_x, y=[112] * len(ann_x),
+                mode='text',
+                text=ann_text,
+                textfont=dict(size=8, color='#E65100'),
+                showlegend=True,
+                name=f'Mass {mass_val:.1f} Da',
+                legendgroup='user_mass',
+                hoverinfo='skip',
+            ), row=1, col=1)
+
     # Axes
     fig.update_yaxes(title_text='Rel. Intensity (%)', row=1, col=1,
                      range=[-5, 115],
@@ -195,13 +227,14 @@ def create_mirror_plot(spectrum: Spectrum,
     fig.update_layout(
         template='plotly_white',
         title=dict(text='<b>Mirror Plot</b> — Theoretical vs Experimental',
-                   font=dict(size=12), pad=dict(b=4)),
+                   font=dict(size=13), pad=dict(b=6)),
         paper_bgcolor=DARK_BG, plot_bgcolor=PLOT_BG,
-        font=dict(color='#111111'),
-        height=600,
+        font=dict(color='#202124'),
+        height=720,
         hovermode='x unified',
         legend=dict(orientation='h', yanchor='bottom', y=1.02, x=0,
-                    font=dict(size=10), bgcolor='rgba(255,255,255,0.7)'),
-        margin=dict(l=65, r=20, t=100, b=55),
+                    font=dict(size=10), bgcolor='rgba(255,255,255,0.8)',
+                    bordercolor='rgba(0,0,0,0.08)', borderwidth=1),
+        margin=dict(l=70, r=30, t=110, b=65),
     )
     return fig

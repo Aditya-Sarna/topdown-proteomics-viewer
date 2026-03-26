@@ -1,4 +1,5 @@
 from typing import List, Dict, Optional, Tuple
+import math
 import numpy as np
 
 from ..data.amino_acids import AA_MASSES, WATER, PROTON, PTM_DATABASE
@@ -103,7 +104,7 @@ def generate_isotope_envelope(mass: float,
     # Simplified Poisson distribution (averagine ~ 1 C per 112 Da)
     lam = (mass / 112.0) * 0.0107
     intensities = np.array([
-        np.exp(-lam) * (lam ** k) / max(np.math.factorial(k), 1)
+        np.exp(-lam) * (lam ** k) / max(math.factorial(k), 1)
         for k in range(n_isotopes)
     ], dtype=float)
     if intensities.max() > 0:

@@ -1,15 +1,33 @@
 /* ── Scrollbars ─────────────────────────────────────────────────── */
-::-webkit-scrollbar               { width: 7px; height: 7px; }
-::-webkit-scrollbar-track         { background: #f0f0f0; }
-::-webkit-scrollbar-thumb         { background: #bbbbbb; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover   { background: #888888; }
+::-webkit-scrollbar               { width: 8px; height: 8px; }
+::-webkit-scrollbar-track         { background: #f4f5f7; border-radius: 4px; }
+::-webkit-scrollbar-thumb         { background: #c1c7d0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover   { background: #97a0af; }
+
+/* ── CSS Variables ────────────────────────────────────────────────── */
+:root {
+  --accent:        #1a73e8;
+  --accent-light:  #e8f0fe;
+  --success:       #2e7d32;
+  --warning:       #f57f17;
+  --danger:        #c62828;
+  --muted:         #5f6368;
+  --border:        #dadce0;
+  --card-bg:       #ffffff;
+  --sidebar-bg:    #f8f9fa;
+  --hover-bg:      #f1f3f4;
+  --shadow-sm:     0 1px 3px rgba(60,64,67,.12), 0 1px 2px rgba(60,64,67,.08);
+  --shadow-md:     0 2px 6px rgba(60,64,67,.15), 0 1px 4px rgba(60,64,67,.10);
+  --radius:        6px;
+}
 
 /* ── Global body ─────────────────────────────────────────────────── */
 body {
-  background-color: #ffffff !important;
-  color: #111111 !important;
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  font-size: 0.88rem;
+  background-color: #f4f5f7 !important;
+  color: #202124 !important;
+  font-family: 'Inter', 'Google Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
   overflow: hidden;
 }
 
@@ -19,72 +37,217 @@ body {
 .dark-dropdown .Select-option,
 .dark-dropdown .VirtualizedSelectOption {
   background-color: #ffffff !important;
-  color: #111111 !important;
-  border-color: #cccccc !important;
+  color: #202124 !important;
+  border-color: var(--border) !important;
 }
-.dark-dropdown .Select-option.is-focused {
-  background-color: #f0f4ff !important;
-}
-.dark-dropdown .Select-value-label { color: #1a73e8 !important; }
+.dark-dropdown .Select-option.is-focused { background-color: var(--accent-light) !important; }
+.dark-dropdown .Select-value-label       { color: var(--accent) !important; }
 
-/* Dash-generated dropdown overrides */
-.Select-control       { background: #ffffff !important; border-color: #cccccc !important; }
-.Select-menu-outer    { background: #ffffff !important; border-color: #cccccc !important; }
-.Select-option        { color: #111111 !important; }
-.Select-option.is-focused { background: #f0f4ff !important; }
-.Select-value         { color: #1a73e8 !important; }
-.Select--multi .Select-value { background: #e8f0fe !important; border-color: #1a73e8 !important; }
+/* Dash v2 dropdown overrides */
+.Select-control       { background: #fff !important; border-color: var(--border) !important;
+                          border-radius: var(--radius) !important; box-shadow: none !important; }
+.Select-control:hover { border-color: var(--accent) !important; }
+.Select-menu-outer    { background: #fff !important; border-color: var(--border) !important;
+                          box-shadow: var(--shadow-md) !important; border-radius: var(--radius) !important; }
+.Select-option        { color: #202124 !important; padding: 6px 12px !important; }
+.Select-option.is-focused  { background: var(--accent-light) !important; }
+.Select-value              { color: var(--accent) !important; }
+.Select--multi .Select-value {
+  background: var(--accent-light) !important; border-color: var(--accent) !important;
+  border-radius: 12px !important; padding: 1px 6px !important;
+}
 
 /* ── Tabs ─────────────────────────────────────────────────────────── */
-.nav-tabs             { border-bottom: 1px solid #dddddd !important; }
-.nav-tabs .nav-link   { color: #555555 !important; background: transparent !important;
-                         border: none !important; padding: 6px 14px !important;
-                         font-size: 0.82rem !important; }
-.nav-tabs .nav-link.active { color: #1a73e8 !important;
-                              border-bottom: 2px solid #1a73e8 !important;
-                              background: transparent !important; }
-.nav-tabs .nav-link:hover  { color: #111111 !important; }
+.nav-tabs {
+  border-bottom: 2px solid var(--border) !important;
+  padding: 0 4px !important;
+  gap: 2px !important;
+}
+.nav-tabs .nav-link {
+  color: var(--muted) !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  padding: 8px 16px !important;
+  font-size: 0.83rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  margin-bottom: -2px !important;
+  border-radius: 0 !important;
+  transition: color 0.15s ease !important;
+}
+.nav-tabs .nav-link.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  background: transparent !important;
+  font-weight: 600 !important;
+}
+.nav-tabs .nav-link:hover { color: #202124 !important; background: var(--hover-bg) !important; }
 
 /* ── Cards ────────────────────────────────────────────────────────── */
-.card { background: #ffffff !important; border: 1px solid #dddddd !important; }
-.card-body { padding: 10px 12px !important; }
+.card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.card-body { padding: 14px 16px !important; }
 
 /* ── Inputs ───────────────────────────────────────────────────────── */
 input[type=number], input[type=text],
 .form-control, .form-select {
   background-color: #ffffff !important;
-  color: #111111 !important;
-  border-color: #cccccc !important;
+  color: #202124 !important;
+  border-color: var(--border) !important;
+  border-radius: var(--radius) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
-input::placeholder, textarea::placeholder { color: #999999 !important; }
-textarea.form-control { background-color: #ffffff !important; color: #111111 !important; }
+input[type=number]:focus, input[type=text]:focus,
+.form-control:focus, .form-select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(26,115,232,.15) !important;
+  outline: none !important;
+}
+input::placeholder, textarea::placeholder { color: #b0b8c1 !important; }
+textarea.form-control {
+  background-color: #ffffff !important;
+  color: #202124 !important;
+  resize: vertical !important;
+  min-height: 72px !important;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.btn {
+  border-radius: var(--radius) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  transition: all 0.15s ease !important;
+}
+.btn-primary {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+.btn-primary:hover { background-color: #1557b0 !important; border-color: #1557b0 !important; }
 
 /* ── Switches ─────────────────────────────────────────────────────── */
-.form-check-input:checked { background-color: #1a73e8 !important;
-                             border-color: #1a73e8 !important; }
+.form-check-input:checked {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+/* ── Section labels / subsection headers ─────────────────────────── */
+.sidebar-section-label {
+  text-transform: uppercase !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  color: var(--muted) !important;
+  margin-bottom: 6px !important;
+  padding-bottom: 3px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* ── Info/metric badge ────────────────────────────────────────────── */
+.metric-pill {
+  display: inline-block;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin: 2px 3px 2px 0;
+}
+.metric-pill.success { background: #e8f5e9; color: var(--success); }
+.metric-pill.warning { background: #fff8e1; color: var(--warning); }
+.metric-pill.danger  { background: #ffebee; color: var(--danger); }
 
 /* ── Toast ────────────────────────────────────────────────────────── */
-.toast { max-width: 360px !important; }
-.toast-header { background: #f5f5f5 !important; color: #111111 !important; }
+.toast {
+  max-width: 380px !important;
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--radius) !important;
+}
+.toast-header { background: #f8f9fa !important; color: #202124 !important; font-weight: 600 !important; }
 
 /* ── Modal ────────────────────────────────────────────────────────── */
-.modal-content { background: #ffffff !important; border: 1px solid #cccccc !important;
-                  color: #111111 !important; }
-.modal-header  { border-bottom: 1px solid #dddddd !important; }
-.modal-footer  { border-top: 1px solid #dddddd !important; }
+.modal-content {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: #202124 !important;
+  box-shadow: var(--shadow-md) !important;
+}
+.modal-header { border-bottom: 1px solid var(--border) !important; padding: 14px 20px !important; }
+.modal-footer { border-top:    1px solid var(--border) !important; padding: 12px 20px !important; }
 
 /* ── DataTable ────────────────────────────────────────────────────── */
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td,
 .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
-  font-size: 0.75rem !important;
+  font-size: 0.76rem !important;
+  padding: 6px 10px !important;
 }
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+  font-weight: 600 !important;
+  background-color: #f8f9fa !important;
+  color: #202124 !important;
+  border-bottom: 2px solid var(--border) !important;
+}
+.dash-table-container input[type=text] { font-size: 0.76rem !important; }
 
 /* ── Navbar ───────────────────────────────────────────────────────── */
-.navbar { padding: 8px 16px !important; }
+.navbar {
+  padding: 0 16px !important;
+  height: 58px !important;
+  align-items: center !important;
+}
 
 /* ── Section headers ──────────────────────────────────────────────── */
 .text-uppercase { font-variant: small-caps; }
 
 /* ── Text helpers ────────────────────────────────────────────────── */
-.text-muted { color: #555555 !important; }
-.small       { color: #333333; }
+.text-muted { color: var(--muted) !important; }
+.small       { color: #3c4043; }
+
+/* ── Panel info bar ───────────────────────────────────────────────── */
+.info-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 14px;
+  background: var(--accent-light);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
+  font-size: 0.78rem;
+  color: #1557b0;
+  margin-bottom: 10px;
+}
+.info-bar span { font-weight: 600; }
+
+/* ── "Run Search" button glow ─────────────────────────────────────── */
+#run-search-btn {
+  background: linear-gradient(135deg, #1a73e8 0%, #0d62d1 100%) !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(26,115,232,0.4) !important;
+  font-size: 0.88rem !important;
+  padding: 9px 0 !important;
+  border-radius: var(--radius) !important;
+  letter-spacing: 0.02em !important;
+}
+#run-search-btn:hover {
+  background: linear-gradient(135deg, #1557b0 0%, #0b52b3 100%) !important;
+  box-shadow: 0 3px 12px rgba(26,115,232,0.5) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ── Plotly graph container ──────────────────────────────────────── */
+.js-plotly-plot .plotly .main-svg { border-radius: var(--radius); }
+
+/* ── Loading spinner ─────────────────────────────────────────────── */
+._dash-loading-callback { opacity: 0.7 !important; }
+
+/* ── Sidebar overflow optimization ──────────────────────────────── */
+.sidebar-content { scroll-behavior: smooth; }
+
+/* ── Badge ────────────────────────────────────────────────────────── */
+.badge { border-radius: 10px !important; font-weight: 600 !important; }

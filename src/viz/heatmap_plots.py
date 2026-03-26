@@ -33,7 +33,7 @@ def create_raw_heatmap(
     """
     fig = go.Figure()
     if not spectra:
-        fig.update_layout(title='Load spectra to view heatmap', height=450, **_LAYOUT_BASE)
+        fig.update_layout(title='Load spectra to view heatmap', height=520, **_LAYOUT_BASE)
         return fig
 
     pool = [s for s in spectra if ms_level == 0 or s.ms_level == ms_level]
@@ -77,7 +77,7 @@ def create_raw_heatmap(
         title=f'Raw MS Heatmap ({lvl}) — {len(pool)} scans',
         xaxis_title='Retention Time (min)',
         yaxis_title='m/z',
-        height=450,
+        height=520,
         **_LAYOUT_BASE,
     )
     return fig
@@ -92,7 +92,7 @@ def create_deconvolved_heatmap(spectra: List[Spectrum]) -> go.Figure:
     PROTON = 1.007276
     fig = go.Figure()
     if not spectra:
-        fig.update_layout(title='No spectra loaded', height=450, **_LAYOUT_BASE)
+        fig.update_layout(title='No spectra loaded', height=520, **_LAYOUT_BASE)
         return fig
 
     rts, masses, ints = [], [], []
@@ -110,7 +110,7 @@ def create_deconvolved_heatmap(spectra: List[Spectrum]) -> go.Figure:
     if not rts:
         fig.update_layout(
             title='No precursor mass data — load an mzML file with MS2 precursor information',
-            height=450, **_LAYOUT_BASE,
+            height=520, **_LAYOUT_BASE,
         )
         return fig
 
@@ -152,7 +152,7 @@ def create_deconvolved_heatmap(spectra: List[Spectrum]) -> go.Figure:
         title=f'Deconvolved MS2 Heatmap — {len(rts)} precursor masses',
         xaxis_title='Retention Time (min)',
         yaxis_title='Neutral Monoisotopic Mass (Da)',
-        height=450,
+        height=520,
         **_LAYOUT_BASE,
     )
     return fig

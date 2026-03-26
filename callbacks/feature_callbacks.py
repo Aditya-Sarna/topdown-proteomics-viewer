@@ -4,7 +4,14 @@ Feature map and intensity trace callbacks.
 from dash import Input, Output, State
 
 from src.data.models import Feature, Proteoform
-from src.viz.feature_plots import create_feature_map, create_intensity_trace, create_feature_3d_plot, create_xic_plot
+from src.viz.feature_plots import (
+    create_feature_map,
+    create_intensity_trace,
+    create_feature_3d_plot,
+    create_xic_plot,
+    create_comparison_panel,
+    create_mass_accuracy_plot,
+)
 
 
 def register_callbacks(app):
@@ -132,3 +139,52 @@ def register_callbacks(app):
             if feature else 'Extracted Ion Chromatogram (XIC)'
         )
         return fig, label
+
+    # Theoretical vs. Observed comparison panel
+    @app.callback(
+        Output('comparison-panel-graph', 'figure'),
+        Input('feature-map-graph', 'clickData'),
+        Input('feature-filter', 'value'),
+        Input('th-mass-input', 'value'),
+        State('store-features', 'data'),
+        State('store-spectra',  'data'),
+    )
+    def update_comparison_panel(click_data, fid_filter, th_mass, feats_data, spectra_data):
+        selected_id = None
+        if click_data:
+            try:
+                selected_id = click_data['points'][0]['customdata'][0]
+            except (KeyError, IndexError, TypeError):
+                pass
+        if fid_filter:
+            selected_id = fid_filter.strip()
+
+        feature = None
+        if selected_id and feats_data:
+            for d in feats_data:
+                if d.get('feature_id') == selected_id:
+                    feature = Feature.from_dict(d)
+                    break
+
+        # Fall back to highest-intensity feature when none selected
+        if feature is None and feats_data:
+            feature = Feature.from_dict(
+                max(feats_data, key=lambda d: d.get('intensity', 0))
+            )
+
+        spectra_list = spectra_data or []
+        theoretical_mass = float(th_mass) if th_mass else 0.0
+        return create_comparison_panel(feature, spectra_list, theoretical_mass)
+
+    # Mass accuracy plot
+    @app.callback(
+        Output('mass-accuracy-graph', 'figure'),
+        Input('store-features', 'data'),
+        Input('th-mass-input', 'value'),
+        Input('tolerance-ppm', 'value'),
+    )
+    def update_mass_accuracy(feats_data, th_mass, tol_ppm):
+        features = [Feature.from_dict(d) for d in (feats_data or [])]
+        ref_mass = float(th_mass) if th_mass else 0.0
+        ppm_tol  = float(tol_ppm)  if tol_ppm  else 10.0
+        return create_mass_accuracy_plot(features, ref_mass, ppm_tol)
