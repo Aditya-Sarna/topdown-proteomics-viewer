@@ -19,11 +19,12 @@ def register_callbacks(app):
         Input('store-protein', 'data'),
         Input('show-cleavage', 'value'),
         Input('seq-residues-per-row', 'value'),
+        Input('seq-focus-mass-btn', 'n_clicks'),
         State('store-matched-ions', 'data'),
         State('seq-focus-mass', 'value'),
     )
     def update_sequence(selected_result, prot_data, show_cleavage, residues_per_row,
-                        ions_data, focus_mass):
+                        _focus_clicks, ions_data, focus_mass):
         ions = ([FragmentIon.from_dict(d) for d in ions_data]
                 if ions_data else [])
 
@@ -54,7 +55,7 @@ def register_callbacks(app):
         else:
             cov_text = ''
 
-        # Focus mass: annotate sequence plot if a user mass is entered
+        # Focus mass: highlight the matching subsequence on the grid
         if focus_mass and pf.sequence:
             try:
                 fm = float(focus_mass)
@@ -70,17 +71,30 @@ def register_callbacks(app):
                                 best_err, best_pos = err, (i, j)
                     if best_pos is not None and best_err < 50:  # 50 ppm threshold
                         i0, i1 = best_pos
-                        col0 = i0 % rpr
-                        row0 = i0 // rpr
-                        col1 = (i1 - 1) % rpr
-                        row1 = (i1 - 1) // rpr
+                        # Draw a highlight rectangle around each residue in the match
+                        for k in range(i0, i1):
+                            col = k % rpr
+                            row = k // rpr
+                            fig.add_shape(
+                                type='rect',
+                                x0=col - 0.45, x1=col + 0.45,
+                                y0=-row - 0.45, y1=-row + 0.45,
+                                line=dict(color='#e65100', width=3),
+                                fillcolor='rgba(230, 81, 0, 0.12)',
+                            )
+                        # Label above the first residue of the match
+                        first_col = i0 % rpr
+                        first_row = i0 // rpr
                         fig.add_annotation(
-                            x=(col0 + col1) / 2,
-                            y=-(row0 + row1) / 2 + 0.65,
-                            text=f"⬆ {fm:.1f} Da (Δ{best_err:.1f} ppm)",
-                            showarrow=False,
-                            font=dict(color='#e65100', size=9, family='Arial'),
+                            x=first_col,
+                            y=-first_row + 0.7,
+                            text=f"<b>{fm:.1f} Da</b> ({seq[i0:i1][:12]}{'…' if i1 - i0 > 12 else ''}) Δ{best_err:.1f} ppm",
+                            showarrow=True, arrowhead=2, arrowsize=0.8,
+                            arrowcolor='#e65100', ax=0, ay=-25,
+                            font=dict(color='#e65100', size=10, family='Arial'),
                             xanchor='center',
+                            bgcolor='rgba(255,255,255,0.85)',
+                            bordercolor='#e65100', borderwidth=1, borderpad=3,
                         )
             except (ValueError, TypeError):
                 pass
